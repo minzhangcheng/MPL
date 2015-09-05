@@ -16,7 +16,10 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
+
+from SQL.SQL import SQL
+from SQL.SQL import selectQuery
+from SQL.SQL import deleteQuery
+from SQL.SQL import updateQuery
+from SQL.SQL import insertQuery
+from SQL.SQL import insertManyQuery
