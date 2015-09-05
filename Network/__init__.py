@@ -16,5 +16,7 @@
 #
 # ############################################################################
 
-import Network
-import Misc
+
+from Network.Download import ftpDownload
+from Network.Download import httpDownload
+from Network.Download import download
