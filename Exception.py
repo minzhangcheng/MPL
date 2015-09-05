@@ -16,7 +16,29 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
+
+class Error(Exception):
+    pass
+
+
+class Warning(Exception):
+    pass
+
+
+class NotSupported(Error):
+    def __init__(self, wanted='', supported=list(), category=''):
+        self.category = category
+        self.supported = supported
+        self.wanted = wanted
+
+    def __str__(self):
+        e = ''
+        if self.category:
+            e += 'Unsupported %s!\n\t' % self.category
+        if not self.wanted:
+            self.wanted = 'what you offered'
+        e = 'We are sorry, but %s is not supported.\n\t' % self.wanted
+        if self.supported:
+            e += 'We currently support: '
+            e += ', '.join(self.supported)
+        return e
