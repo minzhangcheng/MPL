@@ -16,8 +16,27 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
+
 import SQL
-import MySQL
+import Misc.Command
+
+from SQL.SQL import selectQuery
+from SQL.SQL import deleteQuery
+from SQL.SQL import updateQuery
+from SQL.SQL import insertQuery
+from SQL.SQL import insertManyQuery
+
+
+class MySQL(SQL.SQL):
+
+    def __init__(self, *args, **kwargs):
+        SQL.SQL.__init__(self, args, kwargs)
+        if 'path' in kwargs:
+            self.__desc.setdefault('path', kwargs['path'])
+        if 'path' in self.__desc:
+            Misc.Command.addPATH(self.__desc['path'])
+
+    def __del__(self):
+        SQL.SQL.__del__()
+
+
