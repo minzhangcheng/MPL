@@ -1,0 +1,40 @@
+# ############################################################################
+#
+# Copyright (C) 2015 Minzhang Cheng
+# Contact: minzhangcheng@gmail.com
+#
+# This file is part of the Minzhang's Python Library, a Python library with
+# many utils by Minzhang Cheng.
+#
+# GNU Lesser General Public License Usage
+# This file may be used under the terms of the GNU Lesser General Public
+# License version 3 as published by the Free Software Foundation and
+# appearing in the file LICENSE included in the packaging of this file.
+# Please review the following information to ensure the GNU Lesser
+# General Public License version 3 requirements will be met:
+# http://www.gnu.org/licenses/gpl-3.0.html
+#
+# ############################################################################
+
+
+import __future__
+
+
+def dict2Lists(input, sort=False):
+    keys = input.keys()
+    if sort:
+        keys.sort()
+    values = list()
+    for i in keys:
+        values.append(input[i])
+    return keys, values
+
+
+def dict2Tuples(input, sort=False):
+    tuples = list()
+    keys = input.keys()
+    if sort:
+        keys.sort()
+    for i in keys:
+        tuples.append((i, input[i]))
+    return tuples
