@@ -16,8 +16,5 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+from MySQL import MySQL

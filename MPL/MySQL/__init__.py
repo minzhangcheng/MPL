@@ -16,8 +16,5 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+from MPL.MySQL import MySQL

@@ -16,8 +16,8 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+import MPL.Network
+import MPL.Misc
+import MPL.Exception
+import MPL.SQL
+import MPL.MySQL

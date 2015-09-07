@@ -16,8 +16,9 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+from MPL.Misc.Dict import *
+
+import MPL.Misc.String
+import MPL.Misc.Table
+import MPL.Misc.Command

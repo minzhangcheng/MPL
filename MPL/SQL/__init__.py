@@ -16,8 +16,11 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+
+from MPL.SQL.SQL import SQL
+from MPL.SQL.SQL import selectQuery
+from MPL.SQL.SQL import deleteQuery
+from MPL.SQL.SQL import updateQuery
+from MPL.SQL.SQL import insertQuery
+from MPL.SQL.SQL import insertManyQuery

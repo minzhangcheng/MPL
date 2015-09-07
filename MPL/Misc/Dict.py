@@ -16,8 +16,25 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+import __future__
+
+
+def dict2Lists(input, sort=False):
+    keys = input.keys()
+    if sort:
+        keys.sort()
+    values = list()
+    for i in keys:
+        values.append(input[i])
+    return keys, values
+
+
+def dict2Tuples(input, sort=False):
+    tuples = list()
+    keys = input.keys()
+    if sort:
+        keys.sort()
+    for i in keys:
+        tuples.append((i, input[i]))
+    return tuples

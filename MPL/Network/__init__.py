@@ -16,8 +16,7 @@
 #
 # ############################################################################
 
-import Network
-import Misc
-import Exception
-import SQL
-import MySQL
+
+from MPL.Network.Download import ftpDownload
+from MPL.Network.Download import httpDownload
+from MPL.Network.Download import download
