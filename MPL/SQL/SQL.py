@@ -39,7 +39,7 @@ def __whereState(keyValueDict, relation='AND'):
     return w
 
 
-def selectQuery(table, keyValueDict, targetColumns=list()):
+def selectQuery(keyValueDict, targetColumns=list(), table=None):
     if not targetColumns:
         gc = '*'
     else:
@@ -49,20 +49,20 @@ def selectQuery(table, keyValueDict, targetColumns=list()):
     return q
 
 
-def deleteQuery(table, keyValueDict):
+def deleteQuery(keyValueDict, table):
     w = __whereState(keyValueDict)
     q = "DELETE FROM %s WHERE %s;" % (table, w)
     return q
 
 
-def updateQuery(table, keyValueDict, updateValueDict):
+def updateQuery(keyValueDict, updateValueDict, table):
     w = __whereState(keyValueDict)
     s = __whereState(updateValueDict, ', ')
     q = "UPDATE %s SET %s WHERE %s;" % (table, s, w)
     return q
 
 
-def insertQuery(table, insertValueDict):
+def insertQuery(insertValueDict, table):
     c, v = MPL.Misc.dict2Lists(insertValueDict)
     c = ', '.join(c)  # c: string for columns
     v = ', '.join(v)  # v: string for values
@@ -78,7 +78,7 @@ def __insertValueMany(insertValueListList):
     return q
 
 
-def insertManyQuery(table, insertValueListDict, itemPerOneTime=500):
+def insertManyQuery(insertValueListDict, table, itemPerOneTime=500):
     queries = list()
     c, v = MPL.Misc.dict2Lists(insertValueListDict)
     c = ', '.join(c)  # c: string for columns
@@ -304,9 +304,8 @@ class SQL:
 
     """
 
-    __initKwargs = ['host', 'user', 'password', 'port', 'database',
-                    'sqlType', 'sqlConnector', 'transaction',
-                    'logFile', 'logLevel']
+    __initKwargs = ['host', 'user', 'password', 'port', 'database', 'table',
+                    'sqlConnector', 'sqlType', 'transaction']
     __standardLoggingLevels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     __sqlConnector = {
         'MySQL': 'pymysql',
@@ -606,6 +605,13 @@ class SQL:
                 self.commit(False)
         return result, True
 
+    """def runSqlScript(self, sqlFilename):
+        rf = open(sqlFilename, 'r')
+        s = rf.read()
+        rf.close()
+        result, status = self.query(s, True)
+        return status"""
+
     def queryMany(self, queries, transaction=None, autoCommit=None):
         if not self.connected:
             self.connect()
@@ -631,56 +637,63 @@ class SQL:
             self.commit()
         return results, True, states
 
-    def find(self, table, keyValueDict, targetColumns=list()):
-        q = selectQuery(table, keyValueDict, targetColumns)
+    def find(self, keyValueDict, targetColumns=list(), table=None):
+        if not table:
+            if 'table' in self.__desc:
+                table = self.__desc['table']
+            else:
+                logging.critical('Table not set.')
+                raise QueryError('Table not set.')
+        q = selectQuery(keyValueDict, targetColumns, table)
         result, state = self.query(q, False)
         return result
 
-    def count(self, table, keyValueDict):
+    def count(self, keyValueDict, table=None):
         targetColumns = keyValueDict.key()[0]
-        result, state = self.find(table, keyValueDict, targetColumns)
+        result, state = self.find(keyValueDict, targetColumns, table)
         return len(result)
 
-    def exist(self, table, keyValueDict):
-        c = self.count(table, keyValueDict)
+    def exist(self, keyValueDict, table):
+        c = self.count(keyValueDict, table)
         if c > 0:
             return True
         else:
             return False
 
-    def delete(self, table, keyValueDict, autoCommit=True):
-        q = deleteQuery(table, keyValueDict)
+    def delete(self, keyValueDict, table=None, autoCommit=True):
+        q = deleteQuery(keyValueDict, table)
         result, state = self.query(q, autoCommit)
         return state
 
-    def update(self, table, keyValueDict, updateValueDict,
+    def update(self, keyValueDict, updateValueDict, table=None,
                autoCommit=True):
-        q = updateQuery(table, keyValueDict, updateValueDict)
+        q = updateQuery(keyValueDict, updateValueDict, table)
         result, state = self.query(q, autoCommit)
         return state
 
-    def insert(self, table, insertValueDict, autoCommit=True):
-        q = insertQuery(table, insertValueDict)
+    def insert(self, insertValueDict, table=None, autoCommit=True):
+        q = insertQuery(insertValueDict, table)
         result, state = self.query(q, autoCommit)
         return state
 
-    def insertMany(self, table, insertValueListDict, itemPerOneTime=500,
+    def insertMany(self, insertValueListDict, table=None, itemPerOneTime=500,
                    transaction=None, autoCommit=True):
-        queries = insertManyQuery(table, insertValueListDict, itemPerOneTime)
+        queries = insertManyQuery(insertValueListDict, table, itemPerOneTime)
         result, state, states = self.queryMany(queries, transaction, autoCommit)
         return state
 
-    def insertUpdate(self, table, keyValues, updateValues,
+    def insertUpdate(self, keyValues, updateValues, table=None,
                      autoCommit=True):
-        if self.exist(table, keyValues):
-            return self.update(table, keyValues, updateValues,
+        if self.exist(keyValues, table):
+            return self.update(keyValues, updateValues, table,
                                autoCommit)
         else:
-            return self.insert(table, keyValues, autoCommit)
+            return self.insert(keyValues, table, autoCommit)
 
-    def insertIgnore(self, table, keyValues, updateValues,
+    def insertIgnore(self, keyValues, updateValues, table=None,
                      autoCommit=True):
-        if self.exist(table, keyValues):
+        if self.exist(keyValues, table):
             return True
         else:
-            return self.insert(table, updateValues, autoCommit)
+            return self.insert(updateValues, table, autoCommit)
+

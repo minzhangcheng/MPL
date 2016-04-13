@@ -79,3 +79,13 @@ class TransactionFailed(MPL.Exception.Warning):
             e += '\nComment:'
             e += '\n%s' % self.comment
         return e
+
+class QueryError(MPL.Exception.Error):
+
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        e = 'Query Error'
+        e += self.message
+        return e

@@ -38,3 +38,31 @@ def dict2Tuples(input, sort=False):
     for i in keys:
         tuples.append((i, input[i]))
     return tuples
+
+
+def unionDict(dicts, mode='union'):
+    """mode: 'union' or 'intersection'"""
+    d = dict()
+    if mode == 'intersection':
+        l = [len(i) for i in dicts]
+        s = l.index(max(l))
+        for k in dicts[s]:
+            keep = True
+            for i in dicts:
+                if k not in i:
+                    keep = False
+                    break
+            if keep:
+                d.setdefault(k, [i[k] for i in dicts])
+    if mode == 'union':
+        for i in range(len(dicts)):
+            for k in dicts[i]:
+                if k not in d:
+                    v = [[] for j in range(0,i)]
+                    for j in dicts[i:]:
+                        if k in j:
+                            v.append(j[k])
+                        else:
+                            v.append([])
+                    d.setdefault(k, v)
+    return d
