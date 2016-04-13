@@ -89,13 +89,9 @@ def getColumn(table, col):
     return part(table, colList=[col])[0]
 
 
-def table2Dict(table, key=0, values=[]):
+def table2Dict(tb, keys, values):
     d = dict()
-    for i in table:
-        k = i[key]
-        if k:
-            if values:
-                d.setdefault(i[key], [i[j] for j in values])
-            else:
-                d.setdefault(i[key], i)
+    for i in tb:
+        if tuple([i[j] for j in keys]) not in d:
+            d.setdefault(tuple([i[j] for j in keys]), [i[j] for j in values])
     return d
