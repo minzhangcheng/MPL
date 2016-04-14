@@ -82,14 +82,6 @@ def functionSp(sp):
 
 
 def blastpSp(sp, db, evalue=0.0001):
-    """
-    directory = tempfile.mkdtemp()
-    fasta = fetchFasta(spAcc)
-    fastaFile = '%s/seq.fasta' % directory
-    wf = open(fastaFile, 'w')
-    print(fasta, file=wf)
-    wf.close()
-    """
     directory = tempfile.mkdtemp()
     fastaFile = '%s/seq.fasta' % directory
     fasta = '>query\n%s' % seq(sp)
@@ -125,6 +117,8 @@ def annotation(spAcc, db, evalue=0.0001):
                 return functionSp(sp)
     return '', '', ''
 
+
+"""
 db = '/Users/minzhang/Downloads/swissprot/swissprot'
 rf = open('/Users/minzhang/Desktop/spAcc.dat', 'r')
 spAccs = [i.split('|')[1] for i in rf.readlines()]
@@ -134,3 +128,4 @@ for i in spAccs:
     print('%s\t%s\t%s\t%s' % (i, id, name, funct), file=wf, end='\n')
 rf.close()
 wf.close()
+"""
