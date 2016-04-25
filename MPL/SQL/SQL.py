@@ -49,6 +49,11 @@ def selectQuery(keyValueDict, targetColumns=list(), table=None):
     return q
 
 
+def countQuery(self, keyValueDict, table=None):
+    w = __whereState(keyValueDict)
+    q = "SELECT COUNT(*) FROM %s WHERE %s;" % (table, w)
+
+
 def deleteQuery(keyValueDict, table):
     w = __whereState(keyValueDict)
     q = "DELETE FROM %s WHERE %s;" % (table, w)
@@ -431,20 +436,6 @@ class SQL:
 
     def connect(self):
         comment = 'Connect to %s,' % self.shortName
-        """
-        parList = []
-        if 'user' in self.__desc:
-            parList.append('user="%s"' % self.__desc['user'])
-        if 'password' in self.__desc:
-            parList.append('password="%s"' % self.__desc['password'])
-        if 'host' in self.__desc:
-            parList.append('host="%s"' % self.__desc['host'])
-        if 'port' in self.__desc:
-            parList.append('port=%d' % self.__desc['port'])
-        if 'database' in self.__desc:
-            parList.append('database="%s"' % self.__desc['database'])
-        conStr = 'self.SQLdb.connect(%s)' % ', '.join(parList)
-        """
         par = dict()
         for i in self.__sqldbKwargs:
             if i in self.__desc:
@@ -605,12 +596,6 @@ class SQL:
                 self.commit(False)
         return result, True
 
-    """def runSqlScript(self, sqlFilename):
-        rf = open(sqlFilename, 'r')
-        s = rf.read()
-        rf.close()
-        result, status = self.query(s, True)
-        return status"""
 
     def queryMany(self, queries, transaction=None, autoCommit=None):
         if not self.connected:
@@ -637,6 +622,7 @@ class SQL:
             self.commit()
         return results, True, states
 
+
     def find(self, keyValueDict, targetColumns=list(), table=None):
         if not table:
             if 'table' in self.__desc:
@@ -649,9 +635,15 @@ class SQL:
         return result
 
     def count(self, keyValueDict, table=None):
-        targetColumns = keyValueDict.key()[0]
-        result, state = self.find(keyValueDict, targetColumns, table)
-        return len(result)
+        if not table:
+            if 'table' in self.__desc:
+                table = self.__desc['table']
+            else:
+                logging.critical('Table not set.')
+                raise QueryError('Table not set.')
+        q = countQuery(keyValueDict, table)
+        result, state = self.query(q, False)
+        return result[0][0]
 
     def exist(self, keyValueDict, table):
         c = self.count(keyValueDict, table)
