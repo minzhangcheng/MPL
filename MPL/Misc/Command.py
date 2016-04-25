@@ -41,10 +41,16 @@ def runCommand(command, cwd=None, path=None, timeout=None,
                pathEnv='PATH', osType=None):
     if path:
         addPATH(path, pathEnv, osType)
-    if cwd:
-        p = subprocess.Popen(command, cwd=cwd)
-    else:
-        p = subprocess.Popen(command)
+    try:
+        if ' ' in command:
+            command = command.split(' ')
+        if cwd:
+            p = subprocess.Popen(command, cwd=cwd)
+        else:
+            p = subprocess.Popen(command)
+    except OSError as e:
+        print(e)
+        return False
     r = p.wait(timeout)
     if r != 0:
         return False

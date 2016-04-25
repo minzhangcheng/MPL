@@ -17,4 +17,5 @@
 # ############################################################################
 
 
-from MPL.MySQL import MySQL
+from MPL.MySQL.MySQL import MySQL
+from MPL.MySQL.Exception import *

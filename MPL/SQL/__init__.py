@@ -24,3 +24,4 @@ from MPL.SQL.SQL import deleteQuery
 from MPL.SQL.SQL import updateQuery
 from MPL.SQL.SQL import insertQuery
 from MPL.SQL.SQL import insertManyQuery
+from MPL.SQL.Exception import *

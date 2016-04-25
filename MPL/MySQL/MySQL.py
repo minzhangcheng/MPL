@@ -50,15 +50,6 @@ class MySQL(MPL.SQL.SQL):
         'outputFile': '--result-file'
     }
 
-    def __init__(self, *args, **kwargs):
-        MPL.SQL.SQL.__init__(self, args, kwargs)
-        if 'path' in kwargs:
-            self.__desc.setdefault('path', kwargs['path'])
-        if 'path' in self.__desc:
-            MPL.Misc.Command.addPATH(self.__desc['path'])
-
-    def __del__(self):
-        MPL.SQL.SQL.__del__()
 
     def __connectParameter(self):
         longPar = dict()

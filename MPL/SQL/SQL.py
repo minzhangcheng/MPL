@@ -26,6 +26,8 @@ from MPL.SQL.Exception import *
 
 
 def __whereState(keyValueDict, relation='AND'):
+    if not keyValueDict:
+        return ''
     if relation.upper() == 'AND':
         sep = ' AND '
     elif relation.upper() == 'OR':
@@ -36,7 +38,7 @@ def __whereState(keyValueDict, relation='AND'):
     for key in keyValueDict:
         where.append('%s = %s' % (key, keyValueDict[key]))
     w = sep.join(where)
-    return w
+    return 'WHERE %s' % w
 
 
 def selectQuery(keyValueDict, targetColumns=list(), table=None):
@@ -45,25 +47,25 @@ def selectQuery(keyValueDict, targetColumns=list(), table=None):
     else:
         gc = ', '.join(targetColumns)
     w = __whereState(keyValueDict)
-    q = "SELECT %s FROM %s WHERE %s;" % (gc, table, w)
+    q = "SELECT %s FROM %s\n\t%s;" % (gc, table, w)
     return q
 
 
 def countQuery(self, keyValueDict, table=None):
     w = __whereState(keyValueDict)
-    q = "SELECT COUNT(*) FROM %s WHERE %s;" % (table, w)
+    q = "SELECT COUNT(*) FROM %s\n\t%s;" % (table, w)
 
 
 def deleteQuery(keyValueDict, table):
     w = __whereState(keyValueDict)
-    q = "DELETE FROM %s WHERE %s;" % (table, w)
+    q = "DELETE FROM %s\n\t%s;" % (table, w)
     return q
 
 
 def updateQuery(keyValueDict, updateValueDict, table):
     w = __whereState(keyValueDict)
     s = __whereState(updateValueDict, ', ')
-    q = "UPDATE %s SET %s WHERE %s;" % (table, s, w)
+    q = "UPDATE %s SET %s\n\t%s;" % (table, s, w)
     return q
 
 
@@ -310,7 +312,7 @@ class SQL:
     """
 
     __initKwargs = ['host', 'user', 'password', 'port', 'database', 'table',
-                    'sqlConnector', 'sqlType', 'transaction']
+                    'sqlConnector', 'sqlType', 'transaction', 'path']
     __standardLoggingLevels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
     __sqlConnector = {
         'MySQL': 'pymysql',
@@ -354,7 +356,7 @@ class SQL:
         if 'password' in self.__desc:
             shortName += ':%s' % self.__desc['password']
         if 'host' in self.__desc:
-            shortName += '@%s' % self.__desc['host']
+            shortName += '\@%s' % self.__desc['host']
         if 'port' in self.__desc:
             shortName += ':%d' % self.__desc['port']
         if 'database' in self.__desc:
@@ -427,6 +429,11 @@ class SQL:
             logging.critical(error)
             print(error)
             sys.exit(2)
+
+        if 'path' in kwargs:
+            self.__desc.setdefault('path', kwargs['path'])
+        if 'path' in self.__desc:
+            MPL.Misc.Command.addPATH(self.__desc['path'])
 
         self.shortName = self.__shortName()
 
@@ -505,8 +512,8 @@ class SQL:
         self.connected = False
         return self
 
-    def __del__(self, commit=False):
-        self.close(commit)
+    def __del__(self):
+        self.close()
 
     def setUser(self, user, close=True, commit=False, ignoreFalse=True):
         if 'user' in self.__desc:
