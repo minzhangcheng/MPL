@@ -344,6 +344,7 @@ class SQL:
                           'database': 'database'
     }
     __sqldbKwargsNotStr = ['port']
+    __desc_protected = ['password', 'passwd']
 
     def __shortName(self):
         shortName = '%s' % self.__desc['sqlConnector']
@@ -372,32 +373,30 @@ class SQL:
             raise SqlTypeNotSupported(wanted=sqlType,
                                       supported=self.__sqlConnector.keys())
 
+    def __setLog(self):
+        if 'logFile' in self.__desc:
+            logging.basicConfig(filename=self.__desc['logFile'])
+        __setLog = 'logging.basicConfig(level=logging.%s)' \
+                   % self.__desc['logLevel']
+        exec(__setLog)
+
+
     def __init__(self, *args, **kwargs):
         self.__desc = dict()
         if 'hostDesc' in kwargs:
             for i in kwargs['hostDesc']:
-                self.__desc.setdefault(i, kwargs['hostDesc'][i])
+                self.__desc[i] = kwargs['hostDesc'][i]
         for i in range(0, len(args)):
             key = self.__initKwargs[i]
             value = args[i]
-            if key not in self.__desc:
-                self.__desc.setdefault(key, value)
-            else:
-                self.__desc[key] = value
+            self.__desc[key] = value
         for i in kwargs:
-            if i not in self.__desc:
-                self.__desc.setdefault(i, kwargs[i])
-            else:
-                self.__desc[i] = kwargs[i]
-        if 'logFile' in self.__desc:
-            logging.basicConfig(filename=self.__desc['logFile'])
+            self.__desc[i] = kwargs[i]
         if 'logLevel'not in self.__desc:
-            self.__desc.setdefault('logLevel', 'WARNING')
+            self.__desc['logLevel'] = 'WARNING'
         if self.__desc['logLevel'] not in self.__standardLoggingLevels:
             self.__desc['logLevel'] = 'WARNING'
-        __setLog = 'logging.basicConfig(level=logging.%s)' \
-                   % self.__desc['logLevel']
-        exec(__setLog)
+        self.__setLog()
 
         if 'sqlConnector' not in self.__desc:
             if 'sqlType' in self.__desc:
@@ -405,8 +404,7 @@ class SQL:
                 logging.debug('Try to guess the DB-API library compact with %s'
                               % sqlType)
                 try:
-                    self.__desc.setdefault('sqlConnector',
-                                         self.__connector(sqlType))
+                    self.__desc['sqlConnector'] = self.__connector(sqlType)
                     logging.info('%s was chosen to be the DB-API library to '
                                  'connect to %s'
                                  % (self.__desc['sqlConnector'], sqlType))
@@ -414,7 +412,7 @@ class SQL:
                     logging.critical(str(e))
                     sys.exit(2)
             else:
-                self.__desc.setdefault('sqlConnector', self.__connector())
+                self.__desc['sqlConnector'] = self.__connector()
                 logging.info('%s was chosen to be the DB-API library'
                              % self.__desc['sqlConnector'])
         self.SQLdb = None
@@ -431,7 +429,7 @@ class SQL:
             sys.exit(2)
 
         if 'path' in kwargs:
-            self.__desc.setdefault('path', kwargs['path'])
+            self.__desc['path', kwargs['path']]
         if 'path' in self.__desc:
             MPL.Misc.Command.addPATH(self.__desc['path'])
 
@@ -447,10 +445,9 @@ class SQL:
         for i in self.__sqldbKwargs:
             if i in self.__desc:
                 if i in self.__sqldbKwargsNotStr:
-                    par.setdefault(self.__sqldbKwargs[i], self.__desc[i])
+                    par[self.__sqldbKwargs[i]] = self.__desc[i]
                 else:
-                    par.setdefault(self.__sqldbKwargs[i],
-                                   "'%s'" % self.__desc[i])
+                    par[self.__sqldbKwargs[i]] = "'%s'" % self.__desc[i]
         parStr = MPL.Misc.Command.parameterJoin([], par, {}, shortPrefix='',
                                                 join='=', sep=', ')
         conStr = 'self.SQLdb.connect(%s)' % parStr
@@ -515,69 +512,54 @@ class SQL:
     def __del__(self):
         self.close()
 
-    def setUser(self, user, close=True, commit=False, ignoreFalse=True):
-        if 'user' in self.__desc:
-            self.__desc['user'] = user
+    def __setDesc(self, key, value=None,
+                  close=True, commit=False, ignoreFalse=True):
+        if value:
+            self.__desc[key] = value
+            if close:
+                self.close(commit, ignoreFalse)
+            self.shortName = self.__shortName()
+        if key in self.__desc_protected:
+            return None
         else:
-            self.__desc.setdefault('user', user)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+            return self.__desc[key]
 
-    def setPassword(self, password, close=True, commit=False, ignoreFalse=True):
-        if 'password' in self.__desc:
-            self.__desc['password'] = password
-        else:
-            self.__desc.setdefault('password', password)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+    def user(self, user=None, close=True, commit=False, ignoreFalse=True):
+        return self.__setDesc('user', user, close, commit, ignoreFalse)
 
-    def setHost(self, host, close=True, commit=False, ignoreFalse=True):
-        if 'host' in self.__desc:
-            self.__desc['host'] = host
-        else:
-            self.__desc.setdefault('host', host)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+    def password(self, password=None, close=True, commit=False, ignoreFalse=True):
+        return self.__setDesc('password', password, close, commit, ignoreFalse)
 
-    def setPort(self, port, close=True, commit=False, ignoreFalse=True):
-        if 'port' in self.__desc:
-            self.__desc['port'] = port
-        else:
-            self.__desc.setdefault('port', port)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+    def host(self, host, close=True, commit=False, ignoreFalse=True):
+        return self.__setDesc('host', host, close, commit, ignoreFalse)
 
-    def setDesc(self, desc, close=True, commit=False, ignoreFalse=True):
+    def port(self, port, close=True, commit=False, ignoreFalse=True):
+        return self.__setDesc('port', port, close, commit, ignoreFalse)
+
+    def desc(self, desc, close=True, commit=False, ignoreFalse=True):
         for i in desc:
-            if i not in self.__desc:
-                self.__desc.setdefault(i, desc[i])
-            else:
-                self.__desc[i] = desc[i]
+            self.__desc[i] = desc[i]
         if close:
             self.close(commit, ignoreFalse)
         self.shortName = self.__shortName()
+        d = {i: self.__desc[i] for i in desc if i not in self.__desc_protected}
+        return d
 
-    def setDatabase(self, database, close=True, commit=False, ignoreFalse=True):
-        if 'database' in self.__desc:
-            self.__desc['database'] = database
-        else:
-            self.__desc.setdefault('database', database)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+    def database(self, database, close=True, commit=False, ignoreFalse=True):
+        return self.__setDesc('database', database, close, commit, ignoreFalse)
 
-    def setLogLevel(self, logLevel, close=False, commit=False, ignoreFalse=True):
-        if 'logLevel' in self.__desc:
-            self.__desc['logLevel'] = logLevel
-        else:
-            self.__desc.setdefault('logLevel', logLevel)
-        if close:
-            self.close(commit, ignoreFalse)
-        self.shortName = self.__shortName()
+    def logLevel(self, logLevel):
+        l = self.__setDesc('logLevel', logLevel, close=False)
+        self.__setLog()
+        return l
+
+    def logFile(self, logFile):
+        l = self.__setDesc('logFile', logFile, close=False)
+        self.__setLog()
+        return l
+
+    def path(self, path):
+        return self.__setDesc('path', path, close=False)
 
     def query(self, query, autoCommit=None):
         if not self.connected:
@@ -603,7 +585,6 @@ class SQL:
                 self.commit(False)
         return result, True
 
-
     def queryMany(self, queries, transaction=None, autoCommit=None):
         if not self.connected:
             self.connect()
@@ -628,7 +609,6 @@ class SQL:
         if autoCommit:
             self.commit()
         return results, True, states
-
 
     def find(self, keyValueDict, targetColumns=list(), table=None):
         if not table:
@@ -695,4 +675,10 @@ class SQL:
             return True
         else:
             return self.insert(updateValues, table, autoCommit)
+
+    def __eq__(self, other):
+        for i in ['host', 'port', 'user']:
+            if self.__desc[i] != other.__desc[i]:
+                return False
+        return True
 
