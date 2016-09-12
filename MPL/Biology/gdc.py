@@ -7,115 +7,160 @@ import requests
 import json
 
 
-gdcUrl = 'https://gdc-api.nci.nih.gov/'
-baseDir = '/home/minzhang/Desktop/GDC/'
-
-
-endpoints = {
-    'project': 'projects',
-    'file': 'files',
-    'case': 'cases',
-    'annotation': 'annotations',
-    'mapping': '_mapping'
-}
-
-
-def find(endpoint, values, fields=list(), size=0,
-         errorIgnore=False, maxTrial=10, wait=3, timeout=0, tested=0):
-    if not maxTrial > tested:
-        if errorIgnore:
-            return []
-        else:
-            raise Exception
-    url = 'https://gdc-api.nci.nih.gov/%s' % endpoints[endpoint]
-    filter_content = [
-        {
-            'op': 'in',
-            'content':
-                {
-                    'field': i,
-                    'value': values[i]
-                }
-        } for i in values
-    ]
-    filters = {
-        'op': 'and',
-        'content': filter_content
+class Gdc:
+    __gdcUrl = 'https://gdc-api.nci.nih.gov'
+    __endpoints = {
+        'project': 'projects',
+        'file': 'files',
+        'case': 'cases',
+        'annotation': 'annotations',
+        'mapping': '_mapping',
+        'data': 'data'
     }
-    params = {'filters': json.dumps(filters)}
-    if size != 0:
-        params['size'] = size
-    if fields:
-        params['fields'] = ','.join(fields)
-    try:
-        response = requests.get(url, params=params)
-    except requests.RequestException:
-        tested += 1
-        time.sleep(wait)
-        return find(endpoint, values, fields, size,
-                    errorIgnore, maxTrial, wait, timeout, tested)
-    r = response.json()
-    print(r)
-    if 'data' not in r:
-        tested += 1
-        time.sleep(wait)
-        return find(endpoint, values, fields, size,
-                    errorIgnore, maxTrial, wait, timeout, tested)
-    total = r['data']['pagination']['total']
-    count = r['data']['pagination']['count']
-    if size == 0 and total > count:
-        return find(endpoint, values, fields, total,
-                    errorIgnore, maxTrial, wait, timeout, tested)
-    else:
-        return r['data']['hits']
+
+    def setUrl(self, url):
+        Gdc.__gdcUrl = url
+
+    def gdcUrl(self):
+        return Gdc.__gdcUrl
+
+    def setEndpoints(self, endpoints):
+        Gdc.__endpoints = endpoints
+
+    def endpoints(self):
+        return Gdc.__endpoints
+
+    def url(self, endpoint):
+        return '%s/%s' % (self.gdcUrl(), self.endpoints()[endpoint])
+
+    def find(self, endpoint, values, fields=list(), size=0, errorIgnore=False,
+             maxTrial=10, wait=3, timeout=10, tested=0, log=None):
+        if not maxTrial > tested:
+            if errorIgnore:
+                return []
+            else:
+                raise Exception
+        url = self.url(endpoint)
+        filter_content = [
+            {
+                'op': 'in',
+                'content':
+                    {
+                        'field': i,
+                        'value': values[i]
+                    }
+            } for i in values
+            ]
+        filters = {
+            'op': 'and',
+            'content': filter_content
+        }
+        params = {'filters': json.dumps(filters)}
+        if size != 0:
+            params['size'] = size
+        if fields:
+            params['fields'] = ','.join(fields)
+        try:
+            response = requests.get(url, params=params, timeout=timeout)
+        except requests.RequestException:
+            print('%s\n%s\n\n' % (response.url, 'Requests Error'), file=log)
+            tested += 1
+            time.sleep(wait)
+            return self.find(endpoint, values, fields, size, errorIgnore,
+                             maxTrial, wait, timeout, tested, log)
+        r = response.json()
+        print('%s\n%s\n\n' % (response.url, r), file=log)
+        if 'data' not in r:
+            tested += 1
+            time.sleep(wait)
+            return self.find(endpoint, values, fields, size, errorIgnore,
+                             maxTrial, wait, timeout, tested, log)
+        total = r['data']['pagination']['total']
+        count = r['data']['pagination']['count']
+        if size == 0 and total > count:
+            return self.find(endpoint, values, fields, total, errorIgnore,
+                             maxTrial, wait, timeout, tested, log)
+        else:
+            return r['data']['hits']
 
 
-def case2files(case, fields=list(), size=0,
-               errorIgnore=False, maxTrial=10, wait=3, timeout=0, tested=0):
-    values = {'cases.case_id': [case], 'files.access': ['open']}
-    return find('file', values, fields, size,
-                errorIgnore, maxTrial, wait, timeout, tested)
+class Case(Gdc):
+    def __init__(self, id):
+        self.__id = id
+
+    def setId(self, id):
+        self.__id = id
+
+    def Id(self):
+        return self.__id
+
+    def files(self, fields=list(), size=0, errorIgnore=False,
+              maxTrial=10, wait=3, timeout=10, tested=0, log=None):
+        values = {'cases.case_id': [self.__id], 'files.access': ['open']}
+        return self.find('file', values, fields, size, errorIgnore,
+                         maxTrial, wait, timeout, tested, log)
 
 
-def project2cases(project, fields=list(), size=0,
-                  errorIgnore=False, maxTrial=10, wait=3, timeout=0, tested=0):
-    values = {'cases.project.project_id': [project]}
-    return find('case', values, fields, size,
-                errorIgnore, maxTrial, wait, timeout, tested)
+class Project(Gdc):
+    def __init__(self, id):
+        self.__id = id
+
+    def setId(self, id):
+        self.__id = id
+
+    def Id(self):
+        return self.__id
+
+    def cases(self, fields=list(), size=0, errorIgnore=False,
+              maxTrial=10, wait=3, timeout=10, tested=0, log=None):
+        values = {'cases.project.project_id': [self.Id()]}
+        return self.find('case', values, fields, size, errorIgnore,
+                         maxTrial, wait, timeout, tested, log)
+
+    def files(self, fields=list(), size=0, errorIgnore=False,
+              maxTrial=10, wait=3, timeout=10, tested=0, log=None):
+        values = {'cases.project.project_id': [self.Id()]}
+        return self.find('file', values, fields, size, errorIgnore,
+                         maxTrial, wait, timeout, tested, log)
+
+
+class File(Gdc):
+    def __init__(self, id):
+        self.__id = id
+
+    def setId(self, id):
+        self.__id = id
+
+    def Id(self):
+        return self.__id
+
+    def download(self, filename=None, maxTrial=10, wait=3,
+                 timeout=30, tested=0, log=None):
+        if not maxTrial > tested:
+            raise(Exception)
+        url = self.url('data')
+        url = '%s/%s' % (url, self.Id())
+        try:
+            response = requests.get(url, timeout=timeout)
+        except requests.RequestException:
+            print('%s\n%s\n\n' % (response.url, 'Requests Error'), file=log)
+            tested += 1
+            time.sleep(wait)
+            return self.download(filename, maxTrial, wait,
+                                 timeout, tested, log)
+
+        if not filename:
+            filename = self.Id()
+        print('%s\n%s\n\n' % (response.url, filename), file=log)
+        wf = open(filename, 'wb')
+        wf.write(response.content)
+        wf.close()
 
 
 """
-files = case2files('012e99fe-e3e8-4bb0-bb74-5b0c9992187c')
-wf = open(baseDir + 'Cases/012e99fe-e3e8-4bb0-bb74-5b0c9992187c.json', 'w')
-print(json.dumps(files, indent=2), file=wf)
-wf.close()
-
-files = project2cases('TCGA-STAD', fields=['case_id'])
-wf = open(baseDir + 'TCGA-STAD.json', 'w')
-print(json.dumps(files, indent=2), file=wf)
-wf.close()
+file = File('fd21fb6b-7a99-4677-98ab-4b1a97acd736')
+filename = '/home/minzhang/%s' % file.Id()
+file.download(filename)
 """
-
-
-def printFileList(case):
-    print(case)
-    files = case2files(case)
-    wf = open('/home/minzhang/Desktop/GDC/file_list/%s.json' % case, 'w')
-    print(json.dumps(files, indent=2), file=wf)
-    wf.close()
-
-
-def findAllFiles(project):
-    cases = [i['case_id'] for i in project2cases(project, ['case_id'])]
-    pool = multiprocessing.Pool(processes=8)
-    pool.map(printFileList, cases)
-    # for i in [i['case_id'] for i in project2cases(project, ['case_id'])]:
-    #     printFileList(i)
-
-
-findAllFiles('TCGA-STAD')
-
-
-
 
 
