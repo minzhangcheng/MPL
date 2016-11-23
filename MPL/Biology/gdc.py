@@ -164,3 +164,16 @@ file.download(filename)
 """
 
 
+file = File('78a4229b-f400-4194-bd2f-87d91816b5f4')
+print(file.find('file', {'file_id': 'a1abecb3-73ab-40b9-9b28-4f1b0537206a'},
+               ['file_size', 'cases.case_id', 'origin',
+                'cases.project.project_id',
+                'platform', 'state_comment', 'type']))
+
+"""
+print(file.find('case', {'case_id': '005669e5-1a31-45fb-ae97-9d450e74e7cb'},
+               ['case_id',
+                'diagnoses.tumor_stage',
+                'project.project_id',
+                'tissue_source_site.name']))
+"""
