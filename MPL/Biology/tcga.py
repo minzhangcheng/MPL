@@ -3,12 +3,13 @@ import os
 import multiprocessing.dummy
 import requests
 import json
-import tempfile
-import pymysql
+import time
+# import pymysql
 
 null = 'NULL'
-output_dir = '/Users/minzhang/Desktop/tcga'
-download_dir = '/Users/minzhang/Desktop/tcga/files'
+output_dir = '/home/minzhang/Desktop/tcga'
+download_dir = '/home/minzhang/Desktop/tcga/files'
+sql = '/home/minzhang/Desktop/tcga/files/insert.sql'
 thread = 8
 
 with open('tcgaMap.json', 'r') as f:
@@ -306,32 +307,63 @@ def output_data(directory='.'):
             wf.close()
 
 
-def sql_insert(table, columns, values,
+def insert(table, columns, values,
                host='biodb.cmz.ac.cn', user='biodb_admin',
-               passwd='biodb_admin123456', port=3306, database='biodb'):
-    #con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
-    #cur = con.cursor()
+               passwd='biodb_admin123456', port=3306, database='biodb', log=None):
+    con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
+    cur = con.cursor()
     q = 'INSERT INTO %s (%s) VALUES\n' % (table, ', '.join(columns))
-    q += '\n'.join(['\t(%s)' % ', '.join(["'%s'" % j for j in i]) for i in values])
+    v = []
+    for i in values:
+        l = []
+        for j in i:
+            if j == 'NULL':
+                l.append(j)
+            else:
+                l.append("'%s'" % j)
+        v.append(l)
+    q += ',\n'.join(['\t(%s)' % ', '.join(i) for i in v])
     q += '\n;'
-    print(q)
+    print(q, file=log)
+    cur.execute(q)
 
 
-def allcases(output_dir):
+def get_all_cases_files(maxCount=10):
+    get_project(allProgramList)
     projects = list_project()
     for project in projects:
         cases = list_case([project])
         case_group = [[]]
-        n = 0
+        n = 1
         for case in cases:
-            if n > 9:
+            if n > maxCount:
                 case_group.append([])
-                n = 0
+                n = 1
             case_group[-1].append(case)
             n += 1
         with multiprocessing.dummy.Pool(thread) as p:
             p.map(get_case_file, case_group)
-    output_data(output_dir)
+
+
+def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
+    tables = ['tcga_program', 'tcga_project', 'tcga_tissue_source_site', 'tcga_case', 'tcga_demographic', 'tcga_diagnosis', 'tcga_treatment', 'tcga_family_history', 'tcga_exposure']
+    for table in tables:
+        column = columns[table]
+        value = data[table]
+        value_group = [[]]
+        n = 1
+        for v in value:
+            if n > maxInsert:
+                value_group.append([])
+                n = 1
+            value_group[-1].append(v)
+            n += 1
+        def _insert_(v):
+            insert(table, column, v, host, user,passwd, port, database, log=log)
+        with multiprocessing.dummy.Pool(thread) as p:
+            p.map(_insert_, value_group)
+        # for v in value_group:
+        #    insert(table, column, v, host, user,passwd, port, database)
 
 
 def download_files(file_ids, file_names, download_dir):
@@ -351,7 +383,6 @@ def download_files(file_ids, file_names, download_dir):
         return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
 
 
-
 """
 get_project(['TCGA-SARC', 'TCGA-PAAD'])
 get_case(['0004d251-3f70-4395-b175-c94c2f5b1b81', '000d566c-96c7-4f1c-b36e-fa2222467983', '005669e5-1a31-45fb-ae97-9d450e74e7cb'])
@@ -369,18 +400,16 @@ print(data['tcga_file_expression'])
 print(columns['tcga_file_expression'])
 """
 
-# allcases(output_dir)
+
+get_all_cases_files()
+output_data(output_dir)
+wf = open(sql, 'w')
+insert_data(log=wf)
+wf.close()
+print('end')
 
 """
 print(download_files(['11eaf41e-9047-404a-b67d-d3b7d6c6ac2a', '281c38b1-2f2d-4f97-a909-9eb54ce4c020'],
                      ['mirnas.quantification.txt', 'mirnas.quantification.txt'],
                      download_dir))
 """
-
-
-columns = ['comments', 'data_format', 'file_name', 'file_id', 'project_id', 'state_comment', 'file_size', 'experimental_strategy', 'data_type', 'data_category', 'case_id', 'md5sum', 'submitter_id']
-values = [['HTSeq Counts', 'TXT', 'e188310b-58a2-4dc8-a063-bc3cf7910619.htseq.counts.gz', 'a11d7513-7e29-4e0b-9e0a-93811a304222', 'TCGA-STAD', 'NULL', '254853', 'RNA-Seq', 'Gene Expression Quantification', 'Transcriptome Profiling', '588abaea-ab16-42f4-9457-5901ee791b5f', '61b0f83689c06f6edd6df8a264948ac3', 'e188310b-58a2-4dc8-a063-bc3cf7910619_count'],
-          ['miRNA', 'TSV', 'mirnas.quantification.txt', '7db1fb50-b3e8-45c7-a57b-2ee1b9d54ab5', 'TCGA-KIRC', 'NULL', '50120', 'miRNA-Seq', 'miRNA Expression Quantification', 'Transcriptome Profiling', '11111b58-c7df-4291-ad8a-4baec9ff7d1f', '286c4a6a820da1eb398623bb281fed75', '013f32b1-b9ad-4cf1-bd67-0438101e185a_profiling'],
-          ['FPKM', 'TXT', '547c5238-9d5e-4391-ab5f-b62f576af519.FPKM.txt.gz', '2cc98403-caf4-472f-bafe-b08b574eeeee', 'TCGA-COAD', 'NULL', '546956', 'RNA-Seq', 'Gene Expression Quantification', 'Transcriptome Profiling', '98d45099-feae-4dad-aa38-ec03fed6d999', '335b4ae908b043b834a3d74a66546eef', '547c5238-9d5e-4391-ab5f-b62f576af519_fpkm']]
-table = 'file'
-sql_insert(table, columns, values)
