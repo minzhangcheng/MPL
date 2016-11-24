@@ -1,14 +1,15 @@
 import __future__
 import os
-import sys
-import multiprocessing
-import time
-import tempfile
+import multiprocessing.dummy
 import requests
 import json
+import tempfile
+import pymysql
 
 null = 'NULL'
-output_dir = '/home/minzhang/tcga'
+output_dir = '/Users/minzhang/Desktop/tcga'
+download_dir = '/Users/minzhang/Desktop/tcga/files'
+thread = 8
 
 with open('tcgaMap.json', 'r') as f:
     tcgaMap = json.load(f)
@@ -46,7 +47,7 @@ for i in tcgaMap:
             data[j] = dict()
 
 def queryGdc(endpoint, values, fields=list(), size=0, errorIgnore=False,
-             maxTrial=10, wait=3, timeout=10, tested=0, log=None):
+             maxTrial=10, wait=10, timeout=10, tested=0, log=None):
     if not maxTrial > tested:
         if errorIgnore:
             return []
@@ -75,12 +76,14 @@ def queryGdc(endpoint, values, fields=list(), size=0, errorIgnore=False,
     try:
         response = requests.get(url, params=params, timeout=timeout)
     except requests.RequestException:
+        print(params, file=log)
         print('%s\n%s\n\n' % (response.url, 'Requests Error'), file=log)
         tested += 1
         time.sleep(wait)
         return queryGdc(endpoint, values, fields, size, errorIgnore,
                          maxTrial, wait, timeout, tested, log)
     r = response.json()
+    print(params, file=log)
     print('%s\n%s\n\n' % (response.url, r), file=log)
     if 'data' not in r:
         tested += 1
@@ -240,7 +243,9 @@ def get_case(case_ids):
 
 
 def list_file(case_ids):
-    file_ids = queryGdc('file', {'cases.case_id': case_ids, 'data_category': 'Transcriptome Profiling', 'access': 'open'}, ['file_id'])
+    file_ids = queryGdc('file', {'cases.case_id': case_ids,
+                                 'data_category': ['Transcriptome Profiling', 'DNA Methylation'], 'access': 'open'},
+                        ['file_id'])
     return [i['file_id'] for i in file_ids]
 
 
@@ -275,6 +280,13 @@ def get_file(file_ids):
             data['tcga_file_expression'][key] = d
 
 
+def get_case_file(case_ids):
+    get_case(case_ids)
+    files = list_file(case_ids)
+    if files:
+        get_file(files)
+
+
 def output_data(directory='.'):
     for table in data:
         if data[table]:
@@ -294,7 +306,18 @@ def output_data(directory='.'):
             wf.close()
 
 
-def all(output_dir):
+def sql_insert(table, columns, values,
+               host='biodb.cmz.ac.cn', user='biodb_admin',
+               passwd='biodb_admin123456', port=3306, database='biodb'):
+    #con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
+    #cur = con.cursor()
+    q = 'INSERT INTO %s (%s) VALUES\n' % (table, ', '.join(columns))
+    q += '\n'.join(['\t(%s)' % ', '.join(["'%s'" % j for j in i]) for i in values])
+    q += '\n;'
+    print(q)
+
+
+def allcases(output_dir):
     projects = list_project()
     for project in projects:
         cases = list_case([project])
@@ -306,11 +329,27 @@ def all(output_dir):
                 n = 0
             case_group[-1].append(case)
             n += 1
-        for i in case_group:
-            get_case(i)
-            files = list_file(i)
-            get_file(files)
+        with multiprocessing.dummy.Pool(thread) as p:
+            p.map(get_case_file, case_group)
     output_data(output_dir)
+
+
+def download_files(file_ids, file_names, download_dir):
+    os.chdir(download_dir)
+    d = '&'.join(['ids=%s' % i for i in file_ids])
+    print(d)
+    command = "curl --remote-name --remote-header-name --request POST 'https://gdc-api.nci.nih.gov/data' --data '%s'" % d
+    os.system(command)
+    if len(file_ids) > 1:
+        os.system('tar xvf gdc_download_*.tar.gz')
+        os.system('rm MANIFEST.txt')
+        os.system('rm gdc_download_*.tar.gz')
+        return ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
+    else:
+        os.mkdir('%s/%s' %(download_dir, file_ids[0]))
+        os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
+        return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+
 
 
 """
@@ -330,5 +369,18 @@ print(data['tcga_file_expression'])
 print(columns['tcga_file_expression'])
 """
 
-all(output_dir)
+# allcases(output_dir)
 
+"""
+print(download_files(['11eaf41e-9047-404a-b67d-d3b7d6c6ac2a', '281c38b1-2f2d-4f97-a909-9eb54ce4c020'],
+                     ['mirnas.quantification.txt', 'mirnas.quantification.txt'],
+                     download_dir))
+"""
+
+
+columns = ['comments', 'data_format', 'file_name', 'file_id', 'project_id', 'state_comment', 'file_size', 'experimental_strategy', 'data_type', 'data_category', 'case_id', 'md5sum', 'submitter_id']
+values = [['HTSeq Counts', 'TXT', 'e188310b-58a2-4dc8-a063-bc3cf7910619.htseq.counts.gz', 'a11d7513-7e29-4e0b-9e0a-93811a304222', 'TCGA-STAD', 'NULL', '254853', 'RNA-Seq', 'Gene Expression Quantification', 'Transcriptome Profiling', '588abaea-ab16-42f4-9457-5901ee791b5f', '61b0f83689c06f6edd6df8a264948ac3', 'e188310b-58a2-4dc8-a063-bc3cf7910619_count'],
+          ['miRNA', 'TSV', 'mirnas.quantification.txt', '7db1fb50-b3e8-45c7-a57b-2ee1b9d54ab5', 'TCGA-KIRC', 'NULL', '50120', 'miRNA-Seq', 'miRNA Expression Quantification', 'Transcriptome Profiling', '11111b58-c7df-4291-ad8a-4baec9ff7d1f', '286c4a6a820da1eb398623bb281fed75', '013f32b1-b9ad-4cf1-bd67-0438101e185a_profiling'],
+          ['FPKM', 'TXT', '547c5238-9d5e-4391-ab5f-b62f576af519.FPKM.txt.gz', '2cc98403-caf4-472f-bafe-b08b574eeeee', 'TCGA-COAD', 'NULL', '546956', 'RNA-Seq', 'Gene Expression Quantification', 'Transcriptome Profiling', '98d45099-feae-4dad-aa38-ec03fed6d999', '335b4ae908b043b834a3d74a66546eef', '547c5238-9d5e-4391-ab5f-b62f576af519_fpkm']]
+table = 'file'
+sql_insert(table, columns, values)
