@@ -4,23 +4,24 @@ import multiprocessing.dummy
 import requests
 import json
 import time
-import pymysql
+import tempfile
+# import pymysql
 
 null = 'NULL'
-"""
+
 output_dir = '/home/minzhang/tcga'
 download_dir = '/home/minzhang/tcga/files'
 sql = '/home/minzhang/tcga/insert.sql'
 """
-output_dir = '//Users/minzhang/Desktop/tcga'
+output_dir = '/Users/minzhang/Desktop/tcga'
 download_dir = '/Users/minzhang/Desktop/tcga/files'
 sql = '/Users/minzhang/Desktop/tcga/insert.sql'
+"""
 thread = 16
 
 with open('tcgaMap.json', 'r') as f:
     tcgaMap = json.load(f)
-# allProgramList = ['TCGA', 'TARGET']
-allProgramList = ['TARGET']
+allProgramList = ['TCGA', 'TARGET']
 gdcUrl = 'https://gdc-api.nci.nih.gov'
 endpoints = {
     'project': 'projects',
@@ -85,7 +86,7 @@ def queryGdc(endpoint, values, fields=list(), size=0, errorIgnore=False,
         response = requests.get(url, params=params, timeout=timeout)
     except requests.RequestException:
         print(params, file=log)
-        print('%s\n%s\n\n' % (response.url, 'Requests Error'), file=log)
+        print('%s\n%s\n\n' % (url, 'Requests Error'), file=log)
         tested += 1
         time.sleep(wait)
         return queryGdc(endpoint, values, fields, size, errorIgnore,
@@ -114,8 +115,6 @@ def list_project():
 
 def get_project(project_ids):
     projects = queryGdc('project', {'project_id': project_ids}, fields['project'])
-#     columns = {i: list(tcgaMap['project'][i].keys()) for i in tcgaMap['project']}
-#     data = {i: dict() for i in tcgaMap['project']}
 
     for project in projects:
         d = list()
@@ -334,8 +333,8 @@ def insert(table, columns, values, cur, log=None):
 
 
 def get_all_cases_files(maxCount=10):
-    get_project(allProgramList)
     projects = list_project()
+    get_project(projects)
     for project in projects:
         cases = list_case([project])
         case_group = [[]]
@@ -346,10 +345,10 @@ def get_all_cases_files(maxCount=10):
                 n = 1
             case_group[-1].append(case)
             n += 1
-        for l in case_group:
-            get_case_file(l)
-#         with multiprocessing.dummy.Pool(thread) as p:
-#             p.map(get_case_file, case_group)
+        #for l in case_group:
+        #   get_case_file(l)
+        with multiprocessing.dummy.Pool(thread) as p:
+            p.map(get_case_file, case_group)
 
 
 def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
@@ -365,7 +364,7 @@ def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
                 n = 1
             value_group[-1].append(value[v])
             n += 1
-        con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
+        # con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
         # cur = con.cursor()
         for v in value_group:
             # insert(table, column, v, cur)
@@ -397,9 +396,22 @@ def download_files(file_ids, file_names, download_dir):
         return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
 
 
-def select_file(case_ids):
-    q = 'SELECT (file_id, file_name) FROM TABLE tcga_file_expression\n'
-    q = 'WHERE '
+def insert_file(ids, file_ids, file_names):
+    if len(ids) != len(file_ids) or len(ids) != len(file_names) or len(ids) == 0:
+        return
+    d = tempfile.mkdtemp()
+    filenames = download_files(file_ids, file_names, d)
+    for i in range(0, len(ids)):
+        values = []
+        with open(filenames[i], 'r') as f:
+            for line in f.readlines():
+                p = line.strip('\n\t ').split('\t')
+                if len(p) == 2:
+                    values.append([id[i], p[0], p[1]])
+        insert('tcga_gene_expr', ['file_id', 'gnen', 'value'])
+
+
+
 
 
 
