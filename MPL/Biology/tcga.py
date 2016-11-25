@@ -4,17 +4,23 @@ import multiprocessing.dummy
 import requests
 import json
 import time
-# import pymysql
+import pymysql
 
 null = 'NULL'
-output_dir = '/home/minzhang/Desktop/tcga'
-download_dir = '/home/minzhang/Desktop/tcga/files'
-sql = '/home/minzhang/Desktop/tcga/files/insert.sql'
-thread = 8
+"""
+output_dir = '/home/minzhang/tcga'
+download_dir = '/home/minzhang/tcga/files'
+sql = '/home/minzhang/tcga/insert.sql'
+"""
+output_dir = '//Users/minzhang/Desktop/tcga'
+download_dir = '/Users/minzhang/Desktop/tcga/files'
+sql = '/Users/minzhang/Desktop/tcga/insert.sql'
+thread = 16
 
 with open('tcgaMap.json', 'r') as f:
     tcgaMap = json.load(f)
-allProgramList = ['TCGA', 'TARGET']
+# allProgramList = ['TCGA', 'TARGET']
+allProgramList = ['TARGET']
 gdcUrl = 'https://gdc-api.nci.nih.gov'
 endpoints = {
     'project': 'projects',
@@ -46,6 +52,7 @@ for i in tcgaMap:
             columns[j] = list(tcgaMap[i][j].keys())
         if j not in data:
             data[j] = dict()
+
 
 def queryGdc(endpoint, values, fields=list(), size=0, errorIgnore=False,
              maxTrial=10, wait=10, timeout=10, tested=0, log=None):
@@ -143,7 +150,7 @@ def list_case(projects):
 
 def get_case(case_ids):
     cases = queryGdc('case', {'case_id': case_ids}, fields['case'])
-    upper_tables = {'tcga_project': 'project',
+    upper_tables = {# 'tcga_project': 'project',
                     'tcga_tissue_source_site': 'tissue_source_site'
                     }
     simple_secondary_tables = {'tcga_demographic': 'demographic'
@@ -185,7 +192,7 @@ def get_case(case_ids):
                         elif column == 'case_id':
                             d.append(case['case_id'])
                         else:
-                            d.append('null')
+                            d.append(null)
                     data[table][key] = d
 
         for table in multi_secondary_table:
@@ -202,7 +209,7 @@ def get_case(case_ids):
                             elif column == 'case_id':
                                 d.append(case['case_id'])
                             else:
-                                d.append('null')
+                                d.append(null)
                         data[table][key] = d
 
         # treatment
@@ -224,10 +231,11 @@ def get_case(case_ids):
                                 elif column == 'diagnosis_id':
                                     d.append(dg_id)
                                 else:
-                                    d.append('null')
+                                    d.append(null)
                             data['tcga_treatment'][key] = d
 
         item = case
+        d = list()
         key = item['case_id']
         table = 'tcga_case'
         if key != '' and key not in data[table]:
@@ -239,7 +247,7 @@ def get_case(case_ids):
                 elif column == 'case_id':
                     d.append(case['case_id'])
                 else:
-                    d.append('null')
+                    d.append(null)
             data[table][key] = d
 
 
@@ -307,25 +315,22 @@ def output_data(directory='.'):
             wf.close()
 
 
-def insert(table, columns, values,
-               host='biodb.cmz.ac.cn', user='biodb_admin',
-               passwd='biodb_admin123456', port=3306, database='biodb', log=None):
-    con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
-    cur = con.cursor()
-    q = 'INSERT INTO %s (%s) VALUES\n' % (table, ', '.join(columns))
-    v = []
-    for i in values:
-        l = []
-        for j in i:
-            if j == 'NULL':
-                l.append(j)
-            else:
-                l.append("'%s'" % j)
-        v.append(l)
-    q += ',\n'.join(['\t(%s)' % ', '.join(i) for i in v])
-    q += '\n;'
-    print(q, file=log)
-    cur.execute(q)
+def insert(table, columns, values, cur, log=None):
+    if values:
+        q = 'INSERT INTO %s (%s) VALUES\n' % (table, ', '.join(columns))
+        v = []
+        for i in values:
+            l = []
+            for j in i:
+                if j == null:
+                    l.append(j)
+                else:
+                    l.append("'%s'" % j)
+            v.append(l)
+        q += ',\n'.join(['\t(%s)' % ', '.join(i) for i in v])
+        q += '\n;'
+        print(q, file=log)
+        # cur.execute(q)
 
 
 def get_all_cases_files(maxCount=10):
@@ -341,8 +346,10 @@ def get_all_cases_files(maxCount=10):
                 n = 1
             case_group[-1].append(case)
             n += 1
-        with multiprocessing.dummy.Pool(thread) as p:
-            p.map(get_case_file, case_group)
+        for l in case_group:
+            get_case_file(l)
+#         with multiprocessing.dummy.Pool(thread) as p:
+#             p.map(get_case_file, case_group)
 
 
 def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
@@ -356,14 +363,21 @@ def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
             if n > maxInsert:
                 value_group.append([])
                 n = 1
-            value_group[-1].append(v)
+            value_group[-1].append(value[v])
             n += 1
-        def _insert_(v):
-            insert(table, column, v, host, user,passwd, port, database, log=log)
+        con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
+        # cur = con.cursor()
+        for v in value_group:
+            # insert(table, column, v, cur)
+            insert(table, column, v, None)
+        # cur.close()
+        # con.close()
+        """
+        def _insert_(vl):
+            insert(table, column, vl, host, user,passwd, port, database, log=log)
         with multiprocessing.dummy.Pool(thread) as p:
             p.map(_insert_, value_group)
-        # for v in value_group:
-        #    insert(table, column, v, host, user,passwd, port, database)
+        """
 
 
 def download_files(file_ids, file_names, download_dir):
@@ -381,6 +395,12 @@ def download_files(file_ids, file_names, download_dir):
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
         return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+
+
+def select_file(case_ids):
+    q = 'SELECT (file_id, file_name) FROM TABLE tcga_file_expression\n'
+    q = 'WHERE '
+
 
 
 """
@@ -401,6 +421,7 @@ print(columns['tcga_file_expression'])
 """
 
 
+
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
@@ -408,8 +429,3 @@ insert_data(log=wf)
 wf.close()
 print('end')
 
-"""
-print(download_files(['11eaf41e-9047-404a-b67d-d3b7d6c6ac2a', '281c38b1-2f2d-4f97-a909-9eb54ce4c020'],
-                     ['mirnas.quantification.txt', 'mirnas.quantification.txt'],
-                     download_dir))
-"""
