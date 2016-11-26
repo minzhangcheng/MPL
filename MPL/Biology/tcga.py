@@ -366,17 +366,15 @@ def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
             n += 1
         # con = pymysql.connect(host=host, user=user, passwd=passwd, port=port, database=database)
         # cur = con.cursor()
-        for v in value_group:
+        # for v in value_group:
             # insert(table, column, v, cur)
-            insert(table, column, v, None)
+        #    insert(table, column, v, None)
         # cur.close()
         # con.close()
-        """
         def _insert_(vl):
-            insert(table, column, vl, host, user,passwd, port, database, log=log)
+            insert(table, column, vl, None)
         with multiprocessing.dummy.Pool(thread) as p:
             p.map(_insert_, value_group)
-        """
 
 
 def download_files(file_ids, file_names, download_dir):
@@ -408,11 +406,13 @@ def insert_file(ids, file_ids, file_names):
                 p = line.strip('\n\t ').split('\t')
                 if len(p) == 2:
                     values.append([id[i], p[0], p[1]])
-        insert('tcga_gene_expr', ['file_id', 'gnen', 'value'])
+        insert('tcga_expression', ['file_id', 'gene_id', 'value'], values)
 
 
-
-
+def insert_file_all():
+    q = "SELECT (id, file_id, file_name)\n"
+    q = "FROM tcga_file_expression\n"
+    q = "WHERE comments in (%s)" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
 
 
 """
