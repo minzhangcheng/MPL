@@ -313,6 +313,37 @@ def output_data(directory='.'):
                 print('\t'.join(d), file=wf, end='\n')
             wf.close()
 
+def stringValidate(string, invalidChar='"\\\'', transChar='\\'):
+
+    """
+    This function intend to check a string to see whether is has invalid
+    characters, usually including ", \, and '. If yes, trans-meaning character,
+    generally a back splash '\' would be insert before these characters.
+
+    stringValid(string,                   string to be checked
+                invalidChar = '"\\\'',    invalid characters
+                transChar = '\\')         trans-meaning character
+    """
+    if not string:
+        return string
+    check = False
+    for c in string:
+        if c in invalidChar:
+            check = True
+            break
+    if check:
+        chList = list(string)
+        i = 0
+        while i < len(chList):
+            if chList[i] in invalidChar:
+                chList.insert(i, transChar)
+                i += 2
+            else:
+                i += 1
+        return ''.join(chList)
+    else:
+        return string
+
 
 def insert(table, columns, values, cur, log=None):
     if values:
@@ -324,7 +355,7 @@ def insert(table, columns, values, cur, log=None):
                 if j == null:
                     l.append(j)
                 else:
-                    l.append("'%s'" % j)
+                    l.append("'%s'" % stringValidate(str(j)))
             v.append(l)
         q += ',\n'.join(['\t(%s)' % ', '.join(i) for i in v])
         q += '\n;'
@@ -352,7 +383,7 @@ def get_all_cases_files(maxCount=10):
 
 
 def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
-    tables = ['tcga_program', 'tcga_project', 'tcga_tissue_source_site', 'tcga_case', 'tcga_demographic', 'tcga_diagnosis', 'tcga_treatment', 'tcga_family_history', 'tcga_exposure']
+    tables = ['tcga_program', 'tcga_project', 'tcga_tissue_source_site', 'tcga_case', 'tcga_demographic', 'tcga_diagnosis', 'tcga_treatment', 'tcga_family_history', 'tcga_exposure', 'tcga_file_expression']
     for table in tables:
         column = columns[table]
         value = data[table]
@@ -372,7 +403,7 @@ def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
         # cur.close()
         # con.close()
         def _insert_(vl):
-            insert(table, column, vl, None)
+            insert(table, column, vl, None, log=log)
         with multiprocessing.dummy.Pool(thread) as p:
             p.map(_insert_, value_group)
 
@@ -394,7 +425,7 @@ def download_files(file_ids, file_names, download_dir):
         return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
 
 
-def insert_file(ids, file_ids, file_names):
+def insert_expr(ids, file_ids, file_names):
     if len(ids) != len(file_ids) or len(ids) != len(file_names) or len(ids) == 0:
         return
     d = tempfile.mkdtemp()
@@ -409,10 +440,11 @@ def insert_file(ids, file_ids, file_names):
         insert('tcga_expression', ['file_id', 'gene_id', 'value'], values)
 
 
-def insert_file_all():
+def insert_expr_all():
     q = "SELECT (id, file_id, file_name)\n"
     q = "FROM tcga_file_expression\n"
     q = "WHERE comments in (%s)" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
+
 
 
 """
