@@ -1,0 +1,46 @@
+{'data':
+{
+  'hits':
+  [
+    {
+      'submitter_id': 'TCGA-DD-AAVP',
+      'demographic':
+      {
+        'submitter_id': 'TCGA-DD-AAVP_demographic',
+        'race': 'asian',
+        'year_of_death': None,
+        'gender': 'male',
+        'demographic_id': 'aac73088-e280-54f6-bc81-f6a9fa29ab0f',
+        'year_of_birth': 1959,
+        'ethnicity': 'not hispanic or latino'
+      },
+      'tissue_source_site':
+      {
+        'code': 'DD', 'name': 'Mayo Clinic - Rochester', 'project': 'Liver hepatocellular carcinoma', 'tissue_source_site_id': 'c2eb5c30-93cc-5a99-b9e4-f676e35ed7f8', 'bcr_id': 'NCH'
+      },
+      'case_id': '0004d251-3f70-4395-b175-c94c2f5b1b81',
+      'diagnoses':
+      [
+        {
+          'last_known_disease_status': 'not reported',
+          'prior_malignancy': 'not reported',
+          'days_to_last_follow_up': 2752.0,
+          'site_of_resection_or_biopsy': 'c22.0',
+          'progression_or_recurrence': 'not reported',
+          'days_to_birth': -17833.0,
+          'classification_of_tumor': 'not reported',
+          'morphology': '8170/3',
+          'days_to_death': None,
+          'tumor_stage': 'stage i',
+          'treatments':
+          [
+            {
+              'treatment_id': '28d698d5-b9d7-5897-b2ff-c1e36cd4bcf7',
+              'treatment_intent_type': None,
+              'submitter_id': 'TCGA-DD-AAVP_treatment',
+              'therapeutic_agents': None,
+              'treatment_or_therapy': None,
+              'days_to_treatment': None
+            }
+          ],
+          'primary_diagnosis': 'c22.0', 'submitter_id': 'TCGA-DD-AAVP_diagnosis', 'days_to_last_known_disease_status': None, 'vital_status': 'alive', 'age_at_diagnosis': 17833.0, 'days_to_recurrence': None, 'tumor_grade': 'not reported', 'diagnosis_id': '042507ff-0397-5464-891f-aa527c20f2eb', 'tissue_or_organ_of_origin': 'c22.0'}], 'exposures': [{'cigarettes_per_day': None, 'weight': 62.0, 'years_smoked': None, 'submitter_id': 'TCGA-DD-AAVP_exposure', 'height': 167.0, 'bmi': 22.230987127541326, 'alcohol_history': None, 'exposure_id': 'a68e51b7-257b-5a90-8f9e-1987e84e6d5d', 'alcohol_intensity': None}], 'project': {'name': 'Liver Hepatocellular Carcinoma', 'primary_site': 'Liver', 'dbgap_accession_number': None, 'disease_type': 'Liver Hepatocellular Carcinoma', 'project_id': 'TCGA-LIHC', 'program': {'name': 'TCGA', 'dbgap_accession_number': 'phs000178', 'program_id': 'b80aa962-9650-5110-b3eb-bd087da808db'}}}, {'submitter_id': 'TCGA-77-A5GF', 'demographic': {'submitter_id': 'TCGA-77-A5GF_demographic', 'race': 'not reported', 'year_of_death': None, 'gender': 'male', 'demographic_id': '6ed6aede-1183-5b9c-ae3c-8a7d7d30e127', 'year_of_birth': 1941, 'ethnicity': 'not reported'}, 'tissue_source_site': {'code': '77', 'name': 'Prince Charles Hospital', 'project': 'Lung squamous cell carcinoma', 'tissue_source_site_id': '9677780c-46d3-5efd-ab87-e563075cc9e0', 'bcr_id': 'IGC'}, 'case_id': '005669e5-1a31-45fb-ae97-9d450e74e7cb', 'diagnoses': [{'last_known_disease_status': 'not reported', 'prior_malignancy': 'not reported', 'days_to_last_follow_up': 839.0, 'site_of_resection_or_biopsy': 'c34.3', 'progression_or_recurrence': 'not reported', 'days_to_birth': -25654.0, 'classification_of_tumor': 'not reported', 'morphology': '8070/3', 'days_to_death': 840.0, 'tumor_stage': 'stage iia', 'treatments': [{'treatment_id': '86086bdd-1f53-5d80-9748-ea6a4ddfabd3', 'treatment_intent_type': None, 'submitter_id': 'TCGA-77-A5GF_treatment', 'therapeutic_agents': None, 'treatment_or_therapy': None, 'days_to_treatment': None}], 'primary_diagnosis': 'c34.3', 'submitter_id': 'TCGA-77-A5GF_diagnosis', 'days_to_last_known_disease_status': None, 'vital_status': 'dead', 'age_at_diagnosis': 25654.0, 'days_to_recurrence': None, 'tumor_grade': 'not reported', 'diagnosis_id': '0d7b0c18-913f-5cf8-89aa-f7f758ab7fda', 'tissue_or_organ_of_origin': 'c34.3'}], 'exposures': [{'cigarettes_per_day': 3.287671232876712, 'weight': None, 'years_smoked': 40.0, 'submitter_id': 'TCGA-77-A5GF_exposure', 'height': None, 'bmi': None, 'alcohol_history': None, 'exposure_id': '45c78284-297d-5289-aa01-8c89f428d913', 'alcohol_intensity': None}], 'project': {'name': 'Lung Squamous Cell Carcinoma', 'primary_site': 'Lung', 'dbgap_accession_number': None, 'disease_type': 'Lung Squamous Cell Carcinoma', 'project_id': 'TCGA-LUSC', 'program': {'name': 'TCGA', 'dbgap_accession_number': 'phs000178', 'program_id': 'b80aa962-9650-5110-b3eb-bd087da808db'}}}, {'submitter_id': 'TCGA-KK-A7B2', 'demographic': {'submitter_id': 'TCGA-KK-A7B2_demographic', 'race': 'not reported', 'year_of_death': None, 'gender': 'male', 'demographic_id': '59c837c5-8b7c-59aa-aa2b-f62ad63b43b2', 'year_of_birth': 1944, 'ethnicity': 'not reported'}, 'tissue_source_site': {'code': 'KK', 'name': 'MD Anderson Cancer Center', 'project': 'Prostate adenocarcinoma', 'tissue_source_site_id': 'c4a03d2d-b7e9-5506-9521-4df06091fb20', 'bcr_id': 'IGC'}, 'case_id': '000d566c-96c7-4f1c-b36e-fa2222467983', 'diagnoses': [{'last_known_disease_status': 'not reported', 'prior_malignancy': 'not reported', 'days_to_last_follow_up': 1099.0, 'site_of_resection_or_biopsy': 'c61.9', 'progression_or_recurrence': 'not reported', 'days_to_birth': -24845.0, 'classification_of_tumor': 'not reported', 'morphology': '8140/3', 'days_to_death': None, 'tumor_stage': 'not reported', 'treatments': [{'treatment_id': 'f5d72d8b-814a-5654-b21e-04c279accc7e', 'treatment_intent_type': None, 'submitter_id': 'TCGA-KK-A7B2_treatment', 'therapeutic_agents': None, 'treatment_or_therapy': None, 'days_to_treatment': None}], 'primary_diagnosis': 'c61', 'submitter_id': 'TCGA-KK-A7B2_diagnosis', 'days_to_last_known_disease_status': None, 'vital_status': 'alive', 'age_at_diagnosis': 24845.0, 'days_to_recurrence': None, 'tumor_grade': 'not reported', 'diagnosis_id': '6f5cdc10-b44d-5966-9ce6-c0d25364b641', 'tissue_or_organ_of_origin': 'c61.9'}], 'exposures': [{'cigarettes_per_day': None, 'weight': None, 'years_smoked': None, 'submitter_id': 'TCGA-KK-A7B2_exposure', 'height': None, 'bmi': None, 'alcohol_history': None, 'exposure_id': 'f421969d-274a-55e0-a6c3-f3fa5d5fed56', 'alcohol_intensity': None}], 'project': {'name': 'Prostate Adenocarcinoma', 'primary_site': 'Prostate', 'dbgap_accession_number': None, 'disease_type': 'Prostate Adenocarcinoma', 'project_id': 'TCGA-PRAD', 'program': {'name': 'TCGA', 'dbgap_accession_number': 'phs000178', 'program_id': 'b80aa962-9650-5110-b3eb-bd087da808db'}}}], 'pagination': {'size': 10, 'pages': 1, 'page': 1, 'total': 3, 'from': 1, 'sort': '', 'count': 3}}, 'warnings': {}}

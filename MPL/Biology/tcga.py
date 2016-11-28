@@ -168,7 +168,10 @@ def get_case(case_ids):
                 if key != '' and key not in data[table]:
                     for column in columns[table]:
                         if column in item:
-                            d.append(item[column])
+                            if item[column]:
+                                d.append(item[column])
+                            else:
+                                d.append(null)
                         elif column == 'project_id':
                             d.append(case['project']['project_id'])
                         elif column == 'case_id':
@@ -185,7 +188,10 @@ def get_case(case_ids):
                 if key != '' and key not in data[table]:
                     for column in columns[table]:
                         if column in item:
-                            d.append(item[column])
+                            if item[column]:
+                                d.append(item[column])
+                            else:
+                                d.append(null)
                         elif column == 'project_id':
                             d.append(case['project']['project_id'])
                         elif column == 'case_id':
@@ -202,7 +208,10 @@ def get_case(case_ids):
                     if key != '' and key not in data[table]:
                         for column in columns[table]:
                             if column in item:
-                                d.append(item[column])
+                                if item[column]:
+                                    d.append(item[column])
+                                else:
+                                    d.append(null)
                             elif column == 'project_id':
                                 d.append(case['project']['project_id'])
                             elif column == 'case_id':
@@ -219,10 +228,14 @@ def get_case(case_ids):
                     for tr in dg['treatments']:
                         d = list()
                         key = tr['treatment_id']
+                        item = tr
                         if key != '' and key not in data['tcga_treatment']:
                             for column in columns['tcga_treatment']:
                                 if column in item:
-                                    d.append(item[column])
+                                    if item[column]:
+                                        d.append(item[column])
+                                    else:
+                                        d.append(null)
                                 elif column == 'project_id':
                                     d.append(case['project']['project_id'])
                                 elif column == 'case_id':
@@ -240,7 +253,10 @@ def get_case(case_ids):
         if key != '' and key not in data[table]:
             for column in columns[table]:
                 if column in item:
-                    d.append(item[column])
+                    if item[column]:
+                        d.append(item[column])
+                    else:
+                        d.append(null)
                 elif column == 'project_id':
                     d.append(case['project']['project_id'])
                 elif column == 'case_id':
@@ -352,7 +368,9 @@ def insert(table, columns, values, cur, log=None):
         for i in values:
             l = []
             for j in i:
-                if j == null:
+                if j is None:
+                    l.append(null)
+                elif j == null:
                     l.append(j)
                 else:
                     l.append("'%s'" % stringValidate(str(j)))
@@ -418,17 +436,27 @@ def download_files(file_ids, file_names, download_dir):
         os.system('tar xvf gdc_download_*.tar.gz')
         os.system('rm MANIFEST.txt')
         os.system('rm gdc_download_*.tar.gz')
-        return ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
+        #r = ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
-        return ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+        #r = ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+    r = list()
+    for i in range(0, len(file_ids)):
+        if file_names[-2:] == 'gz':
+            os.chdir('%s/%s' % (download_dir, file_ids[i]))
+            os.system('gzip -d %s' % file_names[i])
+            r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i][:-3]))
+        else:
+            r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
+    return r
 
 
 def insert_expr(ids, file_ids, file_names):
     if len(ids) != len(file_ids) or len(ids) != len(file_names) or len(ids) == 0:
         return
-    d = tempfile.mkdtemp()
+    # d = tempfile.mkdtemp()
+    d = '/home/minzhang'
     filenames = download_files(file_ids, file_names, d)
     for i in range(0, len(ids)):
         values = []
@@ -441,10 +469,18 @@ def insert_expr(ids, file_ids, file_names):
 
 
 def insert_expr_all():
-    q = "SELECT (id, file_id, file_name)\n"
-    q = "FROM tcga_file_expression\n"
-    q = "WHERE comments in (%s)" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
-
+    q = "SELECT id, file_id, file_name\n"
+    q += "FROM tcga_file_expression\n"
+    q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
+    print(q)
+    import pymysql
+    con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
+    cur = con.cursor()
+    cur.execute(q)
+    r = cur.fetchall()
+    for i in r:
+        print(i)
+    print(len(r))
 
 
 """
@@ -465,11 +501,14 @@ print(columns['tcga_file_expression'])
 """
 
 
-
+"""
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
 insert_data(log=wf)
 wf.close()
 print('end')
+"""
 
+# insert_expr_all()
+insert_expr(['70115', '70114'], ['fc0a159a-6650-4ec7-a66d-76b4d2303102', '455482ad-592e-46fe-a5da-0f910ea58e2d'], ['eef287c6-002b-475a-9483-d7df242a15b6.FPKM-UQ.txt.gz', 'mirnas.quantification.txt'])
