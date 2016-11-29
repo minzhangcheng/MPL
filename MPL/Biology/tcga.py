@@ -4,7 +4,7 @@ import multiprocessing.dummy
 import requests
 import json
 import time
-import tempfile
+# import tempfile
 # import pymysql
 
 null = 'NULL'
@@ -436,14 +436,14 @@ def download_files(file_ids, file_names, download_dir):
         os.system('tar xvf gdc_download_*.tar.gz')
         os.system('rm MANIFEST.txt')
         os.system('rm gdc_download_*.tar.gz')
-        #r = ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
+        # r = ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
-        #r = ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+        # r = ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
     r = list()
     for i in range(0, len(file_ids)):
-        if file_names[-2:] == 'gz':
+        if file_names[i][-2:] == 'gz':
             os.chdir('%s/%s' % (download_dir, file_ids[i]))
             os.system('gzip -d %s' % file_names[i])
             r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i][:-3]))
@@ -452,35 +452,52 @@ def download_files(file_ids, file_names, download_dir):
     return r
 
 
-def insert_expr(ids, file_ids, file_names):
+def insert_expr(ids, file_ids, file_names, log=None):
     if len(ids) != len(file_ids) or len(ids) != len(file_names) or len(ids) == 0:
         return
-    # d = tempfile.mkdtemp()
-    d = '/home/minzhang'
-    filenames = download_files(file_ids, file_names, d)
+    filenames = download_files(file_ids, file_names, download_dir)
     for i in range(0, len(ids)):
-        values = []
+        values = list()
         with open(filenames[i], 'r') as f:
             for line in f.readlines():
                 p = line.strip('\n\t ').split('\t')
                 if len(p) == 2:
-                    values.append([id[i], p[0], p[1]])
-        insert('tcga_expression', ['file_id', 'gene_id', 'value'], values)
+                    values.append([ids[i], p[0], p[1]])
+        insert('tcga_expression', ['file_id', 'gene_id', 'value'], values, None, log=log)
 
 
-def insert_expr_all():
+def insert_expr_all(log=None):
     q = "SELECT id, file_id, file_name\n"
     q += "FROM tcga_file_expression\n"
     q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
     print(q)
     import pymysql
-    con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
+    con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
     cur = con.cursor()
     cur.execute(q)
     r = cur.fetchall()
+    group = [[]]
+    n = 1
     for i in r:
-        print(i)
-    print(len(r))
+        if n > 10:
+            group.append([])
+            n = 1
+        group[-1].append(i)
+        n += 1
+    """
+    def _insert_(item):
+        ids = [j[0] for j in item]
+        file_ids = [j[1] for j in item]
+        file_names = [j[2] for j in item]
+        insert_expr(ids, file_ids, file_names, log)
+    with multiprocessing.dummy.Pool(thread) as p:
+        p.map(_insert_, group)
+    """
+    for i in group:
+        ids = [j[0] for j in i]
+        file_ids = [j[1] for j in i]
+        file_names = [j[2] for j in i]
+        insert_expr(ids, file_ids, file_names, log)
 
 
 """
@@ -510,5 +527,9 @@ wf.close()
 print('end')
 """
 
+# wf = open(sql, 'w')
+wf=open(sql, 'w')
+insert_expr_all(log=wf)
+wf.close()
 # insert_expr_all()
-insert_expr(['70115', '70114'], ['fc0a159a-6650-4ec7-a66d-76b4d2303102', '455482ad-592e-46fe-a5da-0f910ea58e2d'], ['eef287c6-002b-475a-9483-d7df242a15b6.FPKM-UQ.txt.gz', 'mirnas.quantification.txt'])
+# insert_expr(['70115', '70114'], ['fc0a159a-6650-4ec7-a66d-76b4d2303102', '455482ad-592e-46fe-a5da-0f910ea58e2d'], ['eef287c6-002b-475a-9483-d7df242a15b6.FPKM-UQ.txt.gz', 'mirnas.quantification.txt'])
