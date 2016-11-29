@@ -12,6 +12,7 @@ null = 'NULL'
 output_dir = '/home/minzhang/tcga'
 download_dir = '/home/minzhang/tcga/files'
 sql = '/home/minzhang/tcga/insert.sql'
+expr = '/home/minzhang/tcga/expr.sql'
 """
 output_dir = '/Users/minzhang/Desktop/tcga'
 download_dir = '/Users/minzhang/Desktop/tcga/files'
@@ -426,21 +427,32 @@ def insert_data(host='biodb.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
             p.map(_insert_, value_group)
 
 
-def download_files(file_ids, file_names, download_dir):
-    os.chdir(download_dir)
+def download_files(file_ids, file_names, download_dir, maxTrial=10, wait=10, timeout=10, tested=0, log=None):
+    if not maxTrial > tested:
+        raise Exception
+    url = 'https://gdc-api.nci.nih.gov/data'
     d = '&'.join(['ids=%s' % i for i in file_ids])
-    print(d)
-    command = "curl --remote-name --remote-header-name --request POST 'https://gdc-api.nci.nih.gov/data' --data '%s'" % d
-    os.system(command)
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    try:
+        response = requests.post(url, d, headers=headers)
+    except requests.RequestException:
+        print(d, file=log)
+        print('%s/%s\n\n' % (url, 'Requests Error'), file=log)
+        tested += 1
+        time.sleep(wait)
+        return download_files(file_ids, file_names, download_dir, maxTrial, wait, timeout, tested, log)
+    if response.raise_for_status():
+        return download_files(file_ids, file_names, download_dir, maxTrial, wait, timeout, tested, log)
+    with open('%s/gcd.tar.gz' % download_dir, 'wb') as f:
+        f.write(response.content)
     if len(file_ids) > 1:
-        os.system('tar xvf gdc_download_*.tar.gz')
+        os.chdir(download_dir)
+        os.system('tar xvf gcd.tar.gz')
         os.system('rm MANIFEST.txt')
-        os.system('rm gdc_download_*.tar.gz')
-        # r = ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
+        os.system('rm gcd.tar.gz')
     else:
-        os.mkdir('%s/%s' %(download_dir, file_ids[0]))
-        os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
-        # r = ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
+        os.mkdir('%s/%s' % (download_dir, file_ids[0]))
+        os.rename('%s/gcd.tar.gz' % download_dir, '%s/%s/%s' % (download_dir, file_ids[0], file_names[0]))
     r = list()
     for i in range(0, len(file_ids)):
         if file_names[i][-2:] == 'gz':
@@ -527,9 +539,10 @@ wf.close()
 print('end')
 """
 
-# wf = open(sql, 'w')
-wf=open(sql, 'w')
+
+wf = open(expr, 'w')
 insert_expr_all(log=wf)
 wf.close()
+
 # insert_expr_all()
 # insert_expr(['70115', '70114'], ['fc0a159a-6650-4ec7-a66d-76b4d2303102', '455482ad-592e-46fe-a5da-0f910ea58e2d'], ['eef287c6-002b-475a-9483-d7df242a15b6.FPKM-UQ.txt.gz', 'mirnas.quantification.txt'])
