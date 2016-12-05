@@ -260,12 +260,12 @@ def get_case(case_ids):
                     else:
                         d.append(null)
                 elif column == 'project_id':
-                    d.append(case['project']['project_id'])
+                    d.append(item['project']['project_id'])
                 elif column == 'case_id':
-                    d.append(case['case_id'])
+                    d.append(item['case_id'])
                 elif column == 'tissue_source_site_id':
-                    if 'tissue_source_site' in case:
-                        d.append(case['tissue_source_site']['tissue_source_site_id'])
+                    if 'tissue_source_site' in item:
+                        d.append(item['tissue_source_site']['tissue_source_site_id'])
                     else:
                         d.append(null)
                 else:
@@ -495,6 +495,8 @@ def insert_expr_all(log=None):
     cur = con.cursor()
     cur.execute(q)
     r = cur.fetchall()
+    cur.close()
+    con.close()
     group = [[]]
     n = 1
     for i in r:
@@ -503,22 +505,20 @@ def insert_expr_all(log=None):
             n = 1
         group[-1].append(i)
         n += 1
-    """
-    def _insert_(item):
-        ids = [j[0] for j in item]
-        file_ids = [j[1] for j in item]
-        file_names = [j[2] for j in item]
-        insert_expr(ids, file_ids, file_names, log)
-    with multiprocessing.dummy.Pool(thread) as p:
-        p.map(_insert_, group)
-    """
-    for i in group:
+
+    def __insert__expr__(i):
+        con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+                              database='biodb')
+        cur = con.cursor()
         ids = [j[0] for j in i]
         file_ids = [j[1] for j in i]
         file_names = [j[2] for j in i]
         insert_expr(ids, file_ids, file_names, cur, log)
-    cur.close()
-    con.close()
+        cur.close()
+        con.close()
+
+    with multiprocessing.dummy.Pool(thread) as p:
+        p.map(__insert__expr__, group)
 
 
 get_all_cases_files()
