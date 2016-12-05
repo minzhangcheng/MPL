@@ -521,25 +521,6 @@ def insert_expr_all(log=None):
     con.close()
 
 
-"""
-get_project(['TCGA-SARC', 'TCGA-PAAD'])
-get_case(['0004d251-3f70-4395-b175-c94c2f5b1b81', '000d566c-96c7-4f1c-b36e-fa2222467983', '005669e5-1a31-45fb-ae97-9d450e74e7cb'])
-print(columns)
-print(data)
-directory = '/Users/minzhang/Desktop/tcga'
-output_data(directory)
-get_file(['77e73cc4-ff31-449e-8e3c-7ae5ce57838c'])
-print(columns['tcga_file_expression'])
-print(data['tcga_file_expression'])
-print(queryGdc('file', {'file_id': ['77e73cc4-ff31-449e-8e3c-7ae5ce57838c'], ''}, ['access']))
-files = list_file(['0004d251-3f70-4395-b175-c94c2f5b1b81', '000d566c-96c7-4f1c-b36e-fa2222467983', '005669e5-1a31-45fb-ae97-9d450e74e7cb'])
-get_file(files)
-print(data['tcga_file_expression'])
-print(columns['tcga_file_expression'])
-"""
-
-
-
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
