@@ -264,7 +264,10 @@ def get_case(case_ids):
                 elif column == 'case_id':
                     d.append(case['case_id'])
                 elif column == 'tissue_source_site_id':
-                    d.append(case['tissue_source_site']['tissue_source_site_id'])
+                    if 'tissue_source_site' in case:
+                        d.append(case['tissue_source_site']['tissue_source_site_id'])
+                    else:
+                        d.append(null)
                 else:
                     d.append(null)
             data[table][key] = d
