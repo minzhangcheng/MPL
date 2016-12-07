@@ -4,21 +4,16 @@ import multiprocessing.dummy
 import requests
 import json
 import time
-# import tempfile
+import tempfile
 # import pymysql
 
 null = 'NULL'
 
 output_dir = '/home/minzhang/tcga'
-download_dir = '/home/minzhang/tcga/files'
+download_dir_default = '/home/minzhang/tcga/files'
 sql = '/home/minzhang/tcga/insert.sql'
 expr = '/home/minzhang/tcga/expr.sql'
 
-"""
-output_dir = '/Users/minzhang/Desktop/tcga'
-download_dir = '/Users/minzhang/Desktop/tcga/files'
-sql = '/Users/minzhang/Desktop/tcga/insert.sql'
-"""
 thread = 16
 
 with open('tcgaMap.json', 'r') as f:
@@ -403,13 +398,11 @@ def get_all_cases_files(maxCount=10):
                 n = 1
             case_group[-1].append(case)
             n += 1
-        #for l in case_group:
-        #   get_case_file(l)
         with multiprocessing.dummy.Pool(thread) as p:
             p.map(get_case_file, case_group)
 
 
-def insert_data(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
+def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb', maxInsert=100, log=None):
     tables = ['tcga_program', 'tcga_project', 'tcga_tissue_source_site', 'tcga_case', 'tcga_demographic', 'tcga_diagnosis', 'tcga_treatment', 'tcga_family_history', 'tcga_exposure', 'tcga_file_expression']
     for table in tables:
         column = columns[table]
@@ -423,7 +416,7 @@ def insert_data(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456'
             value_group[-1].append(value[v])
             n += 1
         import pymysql
-        con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
         for v in value_group:
@@ -438,28 +431,37 @@ def insert_data(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456'
         """
 
 
-def download_files(file_ids, file_names, download_dir, maxTrial=10, tested=0):
+def download_files(file_ids, file_names, download_dir=None, maxTrial=10, tested=0):
+    if not download_dir:
+        download_dir = download_dir_default
     if tested >= maxTrial:
         raise Exception
     tested += 1
+    """
     os.chdir(download_dir)
     d = '&'.join(['ids=%s' % i for i in file_ids])
     print(d)
     command = "curl --remote-name --remote-header-name --request POST 'https://gdc-api.nci.nih.gov/data' --data '%s'" % d
     r = os.system(command)
-    if r != 0:
-        return download_files(file_ids, file_names, download_dir, maxTrial, tested)
+    """
+    d = '&'.join(['ids=%s' % i for i in file_ids])
+    print(d)
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    r = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers)
+    # print(r.content)
     if len(file_ids) > 1:
-        r = os.system('tar xvf gdc_download_*.tar.gz')
-        os.system('rm gdc_download_*.tar.gz')
+        filename = '%s/gdc.tar.gz' % download_dir
+        with open(filename, 'wb') as f:
+            f.write(r.content)
+        os.chdir(download_dir)
+        r = os.system('tar xvf gdc.tar.gz')
+        os.system('rm gdc.tar.gz')
         if r != 0:
             return download_files(file_ids, file_names, download_dir, maxTrial, tested)
         os.system('rm MANIFEST.txt')
-        # r = ['%s/%s/%s' % (download_dir, file_ids[i], file_names[i]) for i in range(0, len(file_ids))]
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
-        # r = ['%s/%s/%s' %(download_dir, file_ids[0], file_names[0])]
     r = list()
     for i in range(0, len(file_ids)):
         if file_names[i][-2:] == 'gz':
@@ -471,7 +473,9 @@ def download_files(file_ids, file_names, download_dir, maxTrial=10, tested=0):
     return r
 
 
-def insert_expr(ids, file_ids, file_names, cur=None, log=None):
+def insert_expr(ids, file_ids, file_names, download_dir=None, cur=None, log=None):
+    if not download_dir:
+        download_dir = download_dir_default
     if len(ids) != len(file_ids) or len(ids) != len(file_names) or len(ids) == 0:
         return
     filenames = download_files(file_ids, file_names, download_dir)
@@ -491,7 +495,7 @@ def insert_expr_all(log=None):
     q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
     print(q)
     import pymysql
-    con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
+    con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
     cur = con.cursor()
     cur.execute(q)
     r = cur.fetchall()
@@ -506,19 +510,22 @@ def insert_expr_all(log=None):
         group[-1].append(i)
         n += 1
 
-    def __insert__expr__(i):
-        con = pymysql.connect(host='127.0.0.1', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+    def __insert__(i):
+        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
         ids = [j[0] for j in i]
         file_ids = [j[1] for j in i]
         file_names = [j[2] for j in i]
-        insert_expr(ids, file_ids, file_names, cur, log)
+        d = tempfile.mkdtemp()
+        print(d)
+        insert_expr(ids, file_ids, file_names, d, cur, log)
         cur.close()
         con.close()
+        os.removedirs(d)
 
     with multiprocessing.dummy.Pool(thread) as p:
-        p.map(__insert__expr__, group)
+        p.map(__insert__, group)
 
 
 get_all_cases_files()
@@ -528,7 +535,7 @@ insert_data(log=wf)
 wf.close()
 
 
-wf=open(expr, 'w')
+wf = open(expr, 'w')
 insert_expr_all(log=wf)
 wf.close()
 
