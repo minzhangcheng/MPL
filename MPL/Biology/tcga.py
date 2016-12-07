@@ -5,7 +5,12 @@ import requests
 import json
 import time
 import tempfile
-# import pymysql
+import shutil
+
+
+import mysql.connector
+MySQL = mysql.connector
+
 
 null = 'NULL'
 
@@ -415,8 +420,7 @@ def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
                 n = 1
             value_group[-1].append(value[v])
             n += 1
-        import pymysql
-        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+        con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
         for v in value_group:
@@ -494,8 +498,7 @@ def insert_expr_all(log=None):
     q += "FROM tcga_file_expression\n"
     q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
     print(q)
-    import pymysql
-    con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
+    con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
     cur = con.cursor()
     cur.execute(q)
     r = cur.fetchall()
@@ -511,7 +514,7 @@ def insert_expr_all(log=None):
         n += 1
 
     def __insert__(i):
-        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+        con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
         ids = [j[0] for j in i]
@@ -522,7 +525,7 @@ def insert_expr_all(log=None):
         insert_expr(ids, file_ids, file_names, d, cur, log)
         cur.close()
         con.close()
-        os.removedirs(d)
+        shutil.rmtree(d, True)
 
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
