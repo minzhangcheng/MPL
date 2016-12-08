@@ -462,7 +462,6 @@ def download_files(file_ids, file_names, download_dir=None, maxTrial=10, tested=
     r = list()
     for i in range(0, len(file_ids)):
         if file_names[i][-2:] == 'gz':
-            # os.chdir('%s/%s' % (download_dir, file_ids[i]))
             re = os.system('gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
             if re != 0:
                 print('gzip error: %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
@@ -526,13 +525,13 @@ def insert_expr_all(log=None):
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
 
-"""
+
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
 insert_data(log=wf)
 wf.close()
-"""
+
 
 wf = open(expr, 'w')
 insert_expr_all(log=wf)
