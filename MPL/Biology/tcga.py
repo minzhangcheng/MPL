@@ -427,12 +427,6 @@ def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
             insert(table, column, v, cur, log=log)
         cur.close()
         con.close()
-        """
-        def _insert_(vl):
-            insert(table, column, vl, None, log=log)
-        with multiprocessing.dummy.Pool(thread) as p:
-            p.map(_insert_, value_group)
-        """
 
 
 def download_files(file_ids, file_names, download_dir=None, maxTrial=10, tested=0):
@@ -441,36 +435,38 @@ def download_files(file_ids, file_names, download_dir=None, maxTrial=10, tested=
     if tested >= maxTrial:
         raise Exception
     tested += 1
-    """
-    os.chdir(download_dir)
-    d = '&'.join(['ids=%s' % i for i in file_ids])
-    print(d)
-    command = "curl --remote-name --remote-header-name --request POST 'https://gdc-api.nci.nih.gov/data' --data '%s'" % d
-    r = os.system(command)
-    """
     d = '&'.join(['ids=%s' % i for i in file_ids])
     print(d)
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    r = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers)
-    # print(r.content)
+    try:
+        req = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers)
+    except Exception:
+        print(d)
+        print('%s\n%s\n\n' % (d, 'PoOST Error'))
+        return download_files(file_ids, file_names, download_dir, maxTrial, tested)
     if len(file_ids) > 1:
         filename = '%s/gdc.tar.gz' % download_dir
         with open(filename, 'wb') as f:
-            f.write(r.content)
+            f.write(req.content)
         os.chdir(download_dir)
         r = os.system('tar xvf gdc.tar.gz')
-        os.system('rm gdc.tar.gz')
+        try:
+            os.remove('%s/gdc.tar.gz' % download_dir)
+        except Exception:
+            pass
         if r != 0:
             return download_files(file_ids, file_names, download_dir, maxTrial, tested)
-        os.system('rm MANIFEST.txt')
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
     r = list()
     for i in range(0, len(file_ids)):
         if file_names[i][-2:] == 'gz':
-            os.chdir('%s/%s' % (download_dir, file_ids[i]))
-            os.system('gzip -d %s' % file_names[i])
+            # os.chdir('%s/%s' % (download_dir, file_ids[i]))
+            re = os.system('gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
+            if re != 0:
+                print('gzip error: %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
+                raise Exception
             r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i][:-3]))
         else:
             r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
@@ -530,13 +526,13 @@ def insert_expr_all(log=None):
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
 
-
+"""
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
 insert_data(log=wf)
 wf.close()
-
+"""
 
 wf = open(expr, 'w')
 insert_expr_all(log=wf)
