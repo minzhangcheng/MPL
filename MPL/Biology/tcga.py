@@ -1,6 +1,7 @@
 import __future__
 import os
 import multiprocessing.dummy
+import subprocess
 import requests
 import json
 import time
@@ -429,46 +430,48 @@ def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
         con.close()
 
 
-def download_files(file_ids, file_names, download_dir=None, maxTrial=10, tested=0):
+def download_files(file_ids, file_names, download_dir=None,
+                   maxTrial=10, wait=10, timeout=300, tested=0, log=None):
     if not download_dir:
         download_dir = download_dir_default
     if tested >= maxTrial:
         raise Exception
     tested += 1
     d = '&'.join(['ids=%s' % i for i in file_ids])
-    print(d)
+    print(d, file=log)
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    r = list()
     try:
-        req = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers)
+        req = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers, timeout=timeout)
     except Exception:
-        print(d)
-        print('%s\n%s\n\n' % (d, 'PoOST Error'))
-        return download_files(file_ids, file_names, download_dir, maxTrial, tested)
+        print(d, file=log)
+        print('%s\n%s\n\n' % (d, 'POST Error'), file=log)
+        time.sleep(wait)
+        return download_files(file_ids, file_names, download_dir,
+                              maxTrial, wait, timeout, tested, log)
     if len(file_ids) > 1:
         filename = '%s/gdc.tar.gz' % download_dir
         with open(filename, 'wb') as f:
             f.write(req.content)
         os.chdir(download_dir)
-        r = os.system('tar xvf gdc.tar.gz')
-        try:
-            os.remove('%s/gdc.tar.gz' % download_dir)
-        except Exception:
-            pass
-        if r != 0:
-            return download_files(file_ids, file_names, download_dir, maxTrial, tested)
+        re = os.system('tar xvf gdc.tar.gz')
+        if re != 0:
+            time.sleep(wait)
+            return download_files(file_ids, file_names, download_dir,
+                                  maxTrial, wait, timeout, tested, log)
+        for i in range(0, len(file_ids)):
+            if file_names[i][-2:] == 'gz':
+                re = os.system('gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
+                if re != 0:
+                    time.sleep(wait)
+                    return download_files(file_ids, file_names, download_dir,
+                                          maxTrial, wait, timeout, tested, log)
+                r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i][:-3]))
+            else:
+                r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
         os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
-    r = list()
-    for i in range(0, len(file_ids)):
-        if file_names[i][-2:] == 'gz':
-            re = os.system('gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
-            if re != 0:
-                print('gzip error: %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
-                raise Exception
-            r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i][:-3]))
-        else:
-            r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
     return r
 
 
@@ -509,17 +512,22 @@ def insert_expr_all(log=None):
         n += 1
 
     def __insert__(i):
+        """
         con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
+        """
+        cur = None
         ids = [j[0] for j in i]
         file_ids = [j[1] for j in i]
         file_names = [j[2] for j in i]
         d = tempfile.mkdtemp()
         print(d)
         insert_expr(ids, file_ids, file_names, d, cur, log)
+        """
         cur.close()
         con.close()
+        """
         shutil.rmtree(d, True)
 
     with multiprocessing.dummy.Pool(thread) as p:
