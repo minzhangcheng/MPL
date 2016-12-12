@@ -431,7 +431,7 @@ def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
 
 
 def download_files(file_ids, file_names, download_dir=None,
-                   maxTrial=10, wait=10, timeout=300, tested=0, log=None):
+                   maxTrial=20, wait=60, timeout=3600, tested=0, log=None):
     if not download_dir:
         download_dir = download_dir_default
     if tested >= maxTrial:
@@ -453,6 +453,7 @@ def download_files(file_ids, file_names, download_dir=None,
         filename = '%s/gdc.tar.gz' % download_dir
         with open(filename, 'wb') as f:
             f.write(req.content)
+        subprocess.check_call('tar xvf %s/gdc.tar.gz -C %s' % (download_dir, download_dir))
         os.chdir(download_dir)
         re = os.system('tar xvf gdc.tar.gz')
         if re != 0:
@@ -533,13 +534,13 @@ def insert_expr_all(log=None):
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
 
-
+"""
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
 insert_data(log=wf)
 wf.close()
-
+"""
 
 wf = open(expr, 'w')
 insert_expr_all(log=wf)
