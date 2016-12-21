@@ -7,11 +7,7 @@ import json
 import time
 import tempfile
 import shutil
-
-
-import mysql.connector
-MySQL = mysql.connector
-
+import pymysql
 
 null = 'NULL'
 
@@ -421,7 +417,7 @@ def insert_data(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin1
                 n = 1
             value_group[-1].append(value[v])
             n += 1
-        con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
         for v in value_group:
@@ -437,32 +433,27 @@ def download_files(file_ids, file_names, download_dir=None,
     if tested >= maxTrial:
         raise Exception
     tested += 1
-    d = '&'.join(['ids=%s' % i for i in file_ids])
-    print(d, file=log)
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    d = ','.join(file_ids)
+    cmd = "wget 'https://gdc-api.nci.nih.gov/data/%s' -O %s/gdc.tar.gz" % (d, download_dir)
+    print(cmd, file=log)
+    re = subprocess.check_call(cmd, shell=True, timeout=timeout)
+    if re != 0:
+        subprocess.check_call('rm %s/gdc.tar.gz' % download_dir)
+        return download_files(file_ids, file_names, download_dir, maxTrial, wait, timeout, tested, log)
     r = list()
-    try:
-        req = requests.post(url='https://gdc-api.nci.nih.gov/data', data=d, headers=headers, timeout=timeout)
-    except Exception:
-        print(d, file=log)
-        print('%s\n%s\n\n' % (d, 'POST Error'), file=log)
-        time.sleep(wait)
-        return download_files(file_ids, file_names, download_dir,
-                              maxTrial, wait, timeout, tested, log)
     if len(file_ids) > 1:
-        filename = '%s/gdc.tar.gz' % download_dir
-        with open(filename, 'wb') as f:
-            f.write(req.content)
-        subprocess.check_call('tar xvf %s/gdc.tar.gz -C %s' % (download_dir, download_dir))
-        os.chdir(download_dir)
-        re = os.system('tar xvf gdc.tar.gz')
+        cmd = 'tar xvf %s/gdc.tar.gz -C %s' % (download_dir, download_dir)
+        print(cmd, file=log)
+        re = subprocess.check_call(cmd, shell=True)
         if re != 0:
             time.sleep(wait)
             return download_files(file_ids, file_names, download_dir,
                                   maxTrial, wait, timeout, tested, log)
         for i in range(0, len(file_ids)):
             if file_names[i][-2:] == 'gz':
-                re = os.system('gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
+                cmd = 'gzip -d %s/%s/%s' % (download_dir, file_ids[i], file_names[i])
+                print(cmd, file=log)
+                re = subprocess.check_call(cmd, shell=True)
                 if re != 0:
                     time.sleep(wait)
                     return download_files(file_ids, file_names, download_dir,
@@ -472,7 +463,7 @@ def download_files(file_ids, file_names, download_dir=None,
                 r.append('%s/%s/%s' % (download_dir, file_ids[i], file_names[i]))
     else:
         os.mkdir('%s/%s' %(download_dir, file_ids[0]))
-        os.rename('%s/%s' % (download_dir, file_names[0]), '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
+        os.rename('%s/gdc.tar.gz' % download_dir, '%s/%s/%s' %(download_dir, file_ids[0], file_names[0]))
     return r
 
 
@@ -497,7 +488,7 @@ def insert_expr_all(log=None):
     q += "FROM tcga_file_expression\n"
     q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
     print(q)
-    con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
+    con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
     cur = con.cursor()
     cur.execute(q)
     r = cur.fetchall()
@@ -513,34 +504,29 @@ def insert_expr_all(log=None):
         n += 1
 
     def __insert__(i):
-        """
-        con = MySQL.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
+        con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306,
                               database='biodb')
         cur = con.cursor()
-        """
-        cur = None
         ids = [j[0] for j in i]
         file_ids = [j[1] for j in i]
         file_names = [j[2] for j in i]
         d = tempfile.mkdtemp()
         print(d)
         insert_expr(ids, file_ids, file_names, d, cur, log)
-        """
         cur.close()
         con.close()
-        """
         shutil.rmtree(d, True)
 
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
 
-"""
+
 get_all_cases_files()
 output_data(output_dir)
 wf = open(sql, 'w')
 insert_data(log=wf)
 wf.close()
-"""
+
 
 wf = open(expr, 'w')
 insert_expr_all(log=wf)
