@@ -486,7 +486,9 @@ def insert_expr(ids, file_ids, file_names, download_dir=None, cur=None, log=None
 def insert_expr_all(log=None):
     q = "SELECT id, file_id, file_name\n"
     q += "FROM tcga_file_expression\n"
-    q += "WHERE comments in (%s)\n;" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
+    q += "WHERE comments in (%s) AND id not in (\n" % ', '.join(["'miRNA'", "'FPKM'", "'Unique FPKM'", "'HTSeq Counts'"])
+    q += "    SELECT DISTINCT id FROM tcga_expression\n"
+    q += ");"
     print(q)
     con = pymysql.connect(host='mysql.cmz.ac.cn', user='biodb_admin', passwd='biodb_admin123456', port=3306, database='biodb')
     cur = con.cursor()
@@ -494,6 +496,8 @@ def insert_expr_all(log=None):
     r = cur.fetchall()
     cur.close()
     con.close()
+    if len(r) == 0:
+        return
     group = [[]]
     n = 1
     for i in r:
@@ -519,6 +523,8 @@ def insert_expr_all(log=None):
 
     with multiprocessing.dummy.Pool(thread) as p:
         p.map(__insert__, group)
+
+    return insert_expr_all(log=None)
 
 
 get_all_cases_files()
